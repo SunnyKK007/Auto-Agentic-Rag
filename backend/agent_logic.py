@@ -97,7 +97,9 @@ def generate_answer(state: GraphState) -> GraphState:
                     "answer": (
                         "⚠️ I found related information from web search, but the LLM could not "
                         "summarize it right now because of token exhaustion. "
-                        "The Gemini API free-tier quota has been reached. Please wait a minute and try again."
+                        "The Gemini API free-tier quota has been reached."
+                        "\n\n---\n**Here is the raw information retrieved from web search:**\n\n"
+                        + docs_text
                     )
                 }
             return {
