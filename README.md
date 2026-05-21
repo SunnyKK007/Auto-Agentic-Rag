@@ -1,3 +1,12 @@
+---
+title: Agentic Rag
+emoji: 👀
+colorFrom: green
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # 🤖 AutoDoc RAG System
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](#-production-deployment-100-free)
