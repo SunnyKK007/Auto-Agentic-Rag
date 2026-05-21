@@ -84,6 +84,14 @@ def generate_answer(state: GraphState) -> GraphState:
     
     try:
         response = llm.invoke([sys_msg, human_msg])
+        if state.get("used_web_search"):
+            return {
+                "answer": (
+                    "🌐 This information was not found in the uploaded documents, "
+                    "so I searched the web for you.\n\n---\n\n"
+                    + response.content
+                )
+            }
         return {"answer": response.content}
     except Exception as e:
         error_str = str(e).lower()
