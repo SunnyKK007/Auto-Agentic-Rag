@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 // Reads from .env.local in development, or from Vercel env vars in production.
 // Fallback to Hugging Face Space URL if env var is not set.
 const API_BASE = import.meta.env.VITE_API_URL || 'https://sunny9523-agentic-rag.hf.space';
-const API_KEY = import.meta.env.VITE_API_KEY || 'I_am_sunny_007';
+const API_KEY = import.meta.env.VITE_API_KEY || '';
 const SESSION_STORAGE_KEY = 'autodoc-rag-session-id';
 
 const createSessionId = () => {

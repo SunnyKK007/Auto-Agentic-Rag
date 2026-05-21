@@ -465,7 +465,7 @@ Getting this project live was not straightforward. Here is a full honest log of 
 
 **Solution:** Embedded the Hugging Face **Write-permission Access Token** directly into the remote URL to bypass the macOS Keychain:
 ```bash
-git remote set-url huggingface https://Sunny9523:YOUR_WRITE_TOKEN@huggingface.co/spaces/Sunny9523/Agentic-Rag
+git remote set-url huggingface https://<your-hf-username>:<your-hf-write-token>@huggingface.co/spaces/<your-hf-username>/<your-space-name>
 ```
 
 ---
@@ -496,8 +496,8 @@ ALLOWED_ORIGINS=https://auto-agentic-rag.vercel.app
 
 **Solution:** Hardcoded the Hugging Face backend URL directly as the fallback value in `App.jsx` so the app always works regardless of whether the Vercel environment variable is set:
 ```js
-const API_BASE = import.meta.env.VITE_API_URL || 'https://sunny9523-agentic-rag.hf.space';
-const API_KEY  = import.meta.env.VITE_API_KEY  || 'I_am_sunny_007';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://<your-hf-username>-<your-space-name>.hf.space';
+const API_KEY  = import.meta.env.VITE_API_KEY  || '';
 ```
 After pushing this change, Vercel automatically detected the new commit and redeployed with the correct backend URL baked in.
 
