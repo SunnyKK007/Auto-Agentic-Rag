@@ -1,18 +1,8 @@
----
-title: Agentic Rag
-emoji: 👀
-colorFrom: green
-colorTo: purple
-sdk: docker
-pinned: false
----
 # 🤖 AutoDoc RAG System
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://auto-agentic-rag.vercel.app/)
-[![Backend](https://img.shields.io/badge/Backend-Hugging%20Face-yellow?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/Sunny9523/Agentic-Rag)
-[![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blue?style=for-the-badge&logo=react)](https://auto-agentic-rag.vercel.app/)
-
-> 🚀 **[Try it Live → https://auto-agentic-rag.vercel.app](https://auto-agentic-rag.vercel.app/)**
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](#-production-deployment-100-free)
+[![Backend](https://img.shields.io/badge/Backend-Hugging%20Face-yellow?style=for-the-badge&logo=huggingface)](#-production-deployment-100-free)
+[![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blue?style=for-the-badge&logo=react)](#-production-deployment-100-free)
 
 A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) system** built with a **FastAPI** backend and a **React + Vite** frontend. The system uses a stateful **LangGraph** agent to retrieve relevant document chunks from ChromaDB, gate results by similarity score, answer with Gemini when document context is strong enough, and fall back to live DuckDuckGo web search when the uploaded documents do not contain the answer. It supports ingestion from local file uploads as well as directly from **Google Drive**.
 
@@ -115,9 +105,6 @@ AutoDoc RAG/
 | `google-api-python-client` | Google Drive API v3 |
 | `google-auth-oauthlib` | OAuth 2.0 flow |
 | `google-auth-httplib2` | HTTP transport for Google Auth |
-| `rank_bm25` | BM25 keyword search (available) |
-| `ragas` | RAG evaluation metrics (available) |
-| `presidio-analyzer` | PII detection (available) |
 
 ### Frontend
 | Package | Role |
@@ -153,10 +140,9 @@ Checks the status of a background local-file or Drive ingestion job.
 - **Response:** `{ "status": "processing|completed|failed", "kind": "local|drive", "session_id": "...", "files": [...], "completed": [...], "failed": [...] }`
 
 ### `POST /api/ingest/drive`
-Ingests documents from one or more Google Drive folder/file URLs or IDs. Ingestion runs as a background job and supports arrays, comma-separated input, or newline-separated input.
+Ingests documents from one or more Google Drive folder/file URLs or IDs.
 - **Auth:** optional `X-API-Key` header when `API_KEY` is configured.
 - **Body:** `{ "drive_links": ["<url-or-id-1>", "<url-or-id-2>"], "clear_previous": true, "session_id": "..." }`
-- **Legacy body still accepted:** `{ "folder_id": "<url-or-id>", "clear_previous": true, "session_id": "..." }`
 - **Response:** `{ "job_id": "...", "files": [...], "message": "Ingesting 2 Google Drive links." }`
 
 ### `POST /api/query`
@@ -169,7 +155,7 @@ Swagger UI: `http://localhost:8000/docs`
 
 ---
 
-## 🚀 How to Run
+## 🚀 How to Run Locally
 
 ### Prerequisites
 - Python 3.10+
@@ -181,7 +167,7 @@ Swagger UI: `http://localhost:8000/docs`
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate        # On Windows: venv\Scriptsctivate
+source venv/bin/activate        # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
@@ -245,7 +231,7 @@ npm run build
 3. Go to **APIs & Services → Credentials** → Create **OAuth 2.0 Client ID** → Desktop App.
 4. Download JSON, rename to `credentials.json`, and move to `backend/`.
 
-The first Drive ingestion authenticates once and writes `backend/token.json`. After that, the same token is reused. You do not authenticate once per file.
+The first Drive ingestion authenticates once and writes `backend/token.json`. After that, the same token is reused.
 
 Drive links work when the authenticated Google account can read them:
 - Files/folders owned by that account.
@@ -256,7 +242,9 @@ Unsupported or inaccessible files are skipped or reported as errors. Images and 
 
 ---
 
-## ⚙️ Configuration (config.py)
+## ⚙️ Configuration
+
+### Backend (`backend/.env`)
 
 | Variable | Default | Description |
 |---|---|---|
@@ -266,7 +254,7 @@ Unsupported or inaccessible files are skipped or reported as errors. Images and 
 | `MIN_RELEVANCE_SCORE` | `0.50` | Minimum Chroma relevance score needed to answer from uploaded documents. Lower trusts docs more; higher routes to web search more often. |
 | `ALLOWED_ORIGINS` | `*` | Allowed CORS origins |
 
-Frontend variables:
+### Frontend (`frontend/.env.local`)
 
 | Variable | Default | Description |
 |---|---|---|
@@ -275,136 +263,68 @@ Frontend variables:
 
 ---
 
-## 🐛 Challenges Faced & How We Solved Them
+## ☁️ Production Deployment (100% Free)
 
-### 1. ChromaDB Metadata `IndexError`
-**Problem:** ChromaDB crashed with `IndexError: list index out of range` when PDFs had complex metadata such as `None`, lists, or dictionaries.
+| Layer | Platform | Notes |
+|---|---|---|
+| **Frontend** | [Vercel](https://vercel.com) | Set root directory to `frontend/`, add env vars |
+| **Backend** | [Hugging Face Spaces](https://huggingface.co/spaces) | Docker space, add secrets in Space settings |
+| **Vector DB** | ChromaDB inside Docker | Bundled with backend |
+| **LLM** | Google Gemini API | Free tier (15 req/min) |
 
-**Solution:** Implemented `_sanitize_metadata()` in `ingest.py` to convert all metadata to ChromaDB-safe types: `str`, `int`, `float`, or `bool` before insertion.
+### 🛠️ Step-by-Step Deployment
 
-### 2. Slow Ingestion From One-by-One Embedding
-**Problem:** Each text chunk made a separate Gemini Embeddings API call. A large PDF with many chunks could trigger dozens of individual requests.
+#### 1. Push to GitHub
 
-**Solution:**
-- Introduced `BATCH_SIZE = 10` in `ingest.py`, so chunks are embedded in batches.
-- Changed `database.py` so `add_documents()` performs a single batch insert instead of looping document by document.
-- Wrapped long Drive ingestion work in `asyncio.to_thread()` so FastAPI stays responsive.
+```bash
+git add .
+git commit -m "your commit message"
+git push origin main
+```
 
-### 3. Google Drive `403 fileNotDownloadable`
-**Problem:** Google Docs, Sheets, and Slides are Workspace files, not binary downloadable files. Calling `get_media()` on them returns a `403 fileNotDownloadable` error.
+#### 2. Deploy Backend to Hugging Face
 
-**Solution:** Rewrote `drive_loader.py` to use the Google Drive API `files().export()` endpoint for Workspace files:
-- Google Docs export as `text/plain`
-- Google Sheets export as `text/csv`
-- Google Slides export as `text/plain`
+Create a **Blank Docker Space** on [huggingface.co/spaces](https://huggingface.co/spaces), then push your code:
 
-### 4. Google Drive `404` From Full URL Input
-**Problem:** Users pasted full URLs such as `https://docs.google.com/.../d/FILE_ID/edit`. The API treated the entire URL as an ID and failed.
+```bash
+# First time — add the Hugging Face remote
+git remote add huggingface https://<your-hf-username>:<your-hf-write-token>@huggingface.co/spaces/<your-hf-username>/<your-space-name>
 
-**Solution:** Added `_parse_url()` in `drive_loader.py` using regex to extract IDs from Drive, Docs, Sheets, and folder URLs automatically. It also detects whether the link is a folder or a single file.
+# Push to Hugging Face (triggers automatic Docker build & deploy)
+git push huggingface main
+```
 
-### 5. Corrupted ChromaDB on Startup
-**Problem:** If ingestion crashed mid-way, the local SQLite-backed ChromaDB could be left in a corrupted state, causing server startup failures.
+> Every time you update the backend, just run `git push huggingface main` again. Hugging Face rebuilds and restarts automatically (takes ~2–5 minutes).
 
-**Solution:** Added defensive initialization in `database.py`. If a corrupt DB is detected, the code removes the broken local DB directory and reinitializes ChromaDB automatically.
+#### 3. Set Hugging Face Secrets
 
-### 6. SQLite Write Lock During Clear
-**Problem:** Deleting the ChromaDB directory with `shutil.rmtree()` while the server was running caused SQLite write/readonly database errors.
+Go to your Space → **Settings → Variables and secrets** and add:
 
-**Solution:** Replaced filesystem deletion with ChromaDB's `delete_collection()` API, which safely clears data through the active database connection.
-
-### 7. Agent Latency and Gemini Quota Usage
-**Problem:** The original LangGraph flow used multiple Gemini calls per query: planning, relevance grading, answer generation, and hallucination checking. This increased latency and quickly exhausted free-tier Gemini quota.
-
-**Solution:**
-- Kept Gemini `gemini-2.5-flash` for answer generation.
-- Removed the LLM search-planning call and use the original user question directly for retrieval.
-- Removed the LLM relevance-grading call and now use Chroma relevance scores.
-- Removed the LLM hallucination-check call.
-- Added `MIN_RELEVANCE_SCORE=0.50` so weak document matches route to DuckDuckGo web search.
-
-### 8. Cross-Document Answer Leakage
-**Problem:** After uploading Doc B, the agent could still answer from Doc A if Doc A was already stored in the same vector database.
-
-**Solution:** Added browser-session isolation and a **Clear previous session** checkbox. Each browser session now maps to its own ChromaDB collection, and clearing removes only that session's data before ingesting new files or Drive content.
-
-### 9. Only One Local File Could Be Uploaded
-**Problem:** The frontend only read `files[0]`, and the backend accepted only one `UploadFile`.
-
-**Solution:** Updated the frontend to allow multiple selected files and send all of them as `files`. Updated `/api/ingest` to accept `list[UploadFile]` and process all uploaded files.
-
-### 10. Upload UI Showed Success Too Early
-**Problem:** Local ingestion runs in a background task, but the UI displayed success immediately after the upload request was accepted, before embeddings were finished.
-
-**Solution:** Added background ingestion job tracking with `job_id` and a new `GET /api/ingest/status/{job_id}` endpoint. The frontend now polls this endpoint and only shows success after ingestion completes.
-
-### 11. DuckDuckGo Search Failed at Runtime
-**Problem:** DuckDuckGo fallback routed correctly, but failed with a missing `ddgs` package error.
-
-**Solution:** Added `ddgs` to `backend/requirements.txt` and moved DuckDuckGo tool initialization inside the `try` block so failures return a controlled message instead of a generic internal error.
-
-### 12. Gemini Quota Caused Generic Internal Errors
-**Problem:** When Gemini returned `429 RESOURCE_EXHAUSTED`, the app could show `An internal error occurred`.
-
-**Solution:** Added fallback behavior so if web search succeeds but Gemini cannot summarize due to quota/rate limits, the app returns the raw web-search snippet instead of failing silently.
-
-### 13. Local Upload and Drive Ingestion Could Overlap
-**Problem:** Users could start Drive ingestion while local file ingestion was still running, causing confusing state or accidental clearing/mixing.
-
-**Solution:** Updated the frontend to block local upload while Drive ingestion is running and block Drive ingestion while local upload is running. The UI now clearly shows when Drive ingestion is in progress.
-
-### 14. Drive Ingestion Accepted Only One Link
-**Problem:** The Drive endpoint accepted a single `folder_id`, so users could not paste multiple Drive links at once.
-
-**Solution:** Updated the API to accept `drive_links: list[str]` while keeping legacy `folder_id` support. The frontend now accepts newline-separated or comma-separated Drive links.
-
-### 15. Drive Ingestion Had No Progress Polling
-**Problem:** Drive ingestion was synchronous from the UI's perspective and did not expose per-link completion/failure status.
-
-**Solution:** Drive ingestion now creates the same `job_id` status object used by local uploads. The frontend polls `GET /api/ingest/status/{job_id}` until all Drive links complete or fail.
-
-### 16. API Endpoints Were Unprotected
-**Problem:** Public deployment would expose ingestion and query endpoints without a simple protection layer.
-
-**Solution:** Added optional API-key auth. When `API_KEY` is configured, protected endpoints require the `X-API-Key` header. The frontend sends `VITE_API_KEY`.
-
-### 17. No Formal API Tests
-**Problem:** The project had compile/build checks, but no repeatable backend contract tests.
-
-**Solution:** Added `backend/tests/test_api.py` using Python's built-in `unittest` plus FastAPI `TestClient`. The tests cover API-key enforcement, Drive link splitting, and multi-link Drive job status.
-
----
-
-## 📊 Architecture Decisions
-
-| Decision | Rationale |
+| Secret | Value |
 |---|---|
-| **LangGraph over simple chain** | Enables stateful multi-step reasoning and conditional branching for web search fallback. |
-| **ChromaDB over FAISS** | ChromaDB persists to disk automatically, supports metadata, and has a cleaner Python API for this project. |
-| **Gemini 2.5 Flash** | Good balance of speed, cost, and instruction-following for answer generation. |
-| **Chroma score gate over LLM relevance grading** | Reduces latency and Gemini quota usage by avoiding an extra LLM call per query. |
-| **Session-scoped Chroma collections** | Keeps browser sessions isolated without requiring a full user-account system. |
-| **API-key auth before full OAuth** | Provides a practical deployment guard while keeping the portfolio app simple. |
-| **DuckDuckGo over Tavily** | No API key required and simple to run locally. |
-| **Google Drive API directly** | Provides full control over download vs. export logic for Google Workspace files. |
-| **Batch size of 10** | Balances ingestion speed with API rate-limit safety. |
-| **Async/background ingestion** | Keeps FastAPI responsive during long local-file and Drive ingestion work. |
-| **Hybrid async design** | FastAPI endpoints are async, but blocking library calls are offloaded with `asyncio.to_thread()` instead of forcing the entire project into async. |
+| `GEMINI_API_KEY` | Your Google Gemini API key |
+| `API_KEY` | A strong secret key |
+| `ALLOWED_ORIGINS` | Your Vercel frontend URL (e.g. `https://your-app.vercel.app`) |
 
-### Why the Whole Project Is Not Fully Async
+#### 4. Deploy Frontend to Vercel
 
-The project intentionally uses a hybrid async design. FastAPI endpoints are declared with `async def`, but many core libraries used here are synchronous:
+Import the GitHub repo into [vercel.com](https://vercel.com):
+- Set **Root Directory** to `frontend/`
+- Add environment variables:
 
-- ChromaDB
-- LangChain / LangGraph
-- Google Drive API client
-- PDF/Text/CSV document loaders
-- DuckDuckGo search tool
-- Gemini calls through LangChain
+| Variable | Value |
+|---|---|
+| `VITE_API_URL` | Your Hugging Face Space URL (e.g. `https://your-username-your-space.hf.space`) |
+| `VITE_API_KEY` | Same value as `API_KEY` set in Hugging Face secrets |
 
-Instead of rewriting or replacing these mature synchronous libraries, the app uses `asyncio.to_thread()` for blocking workflows such as ingestion, Drive loading, and agent execution. This keeps the FastAPI event loop responsive while keeping the implementation simpler and more reliable.
+#### 5. Lock Down CORS
 
-In short: the API layer is async-friendly, while heavy synchronous work is moved off the event loop.
+Set `ALLOWED_ORIGINS` in your Hugging Face secrets to your exact Vercel URL:
+```
+ALLOWED_ORIGINS=https://your-app.vercel.app
+```
+
+> **Note:** Do not use `*` wildcard with API key auth — browsers will block requests.
 
 ---
 
@@ -418,129 +338,3 @@ In short: the API layer is async-friendly, while heavy synchronous work is moved
 | Session isolation is browser-based | Map authenticated user IDs to collections after adding full login. |
 | DuckDuckGo can be unreliable | Swap to Tavily or SerpAPI for more reliable structured search results. |
 | No OCR for images/videos | Add OCR and media extraction for scanned PDFs, images, or video transcripts. |
-| Not deployed by this repository alone | Push to GitHub, deploy the frontend to Vercel, deploy the backend to Hugging Face, and configure secrets in each platform. |
-
----
-
-## ☁️ Production Deployment (100% Free)
-
-This project is deployed and live! No credit cards required:
-
-| Layer | Platform | Live URL |
-|---|---|---|
-| **Frontend** | [Vercel](https://vercel.com) | [https://auto-agentic-rag.vercel.app](https://auto-agentic-rag.vercel.app/) |
-| **Backend** | [Hugging Face Spaces](https://huggingface.co/spaces) | [https://sunny9523-agentic-rag.hf.space](https://sunny9523-agentic-rag.hf.space) |
-| **Vector DB** | ChromaDB inside Docker | Bundled with backend |
-| **LLM** | Google Gemini API | Free tier (15 req/min) |
-
----
-
-## 🚧 Deployment Challenges & How We Solved Them
-
-Getting this project live was not straightforward. Here is a full honest log of every problem we hit and how we fixed it.
-
-### 1. Fly.io Machine Quota Exceeded (0 Apps, Still Blocked)
-**Problem:** Even though the account had zero apps, Fly.io returned `requested machine count exceeds organization limit`. Fly.io silently blocks brand new accounts from creating any machines as an anti-bot measure.
-
-**Solution:** Pivoted away from Fly.io entirely. Fly.io requires a verified credit card to lift the machine quota on new accounts. We switched to **Hugging Face Spaces** which requires no credit card and supports Docker deployments natively.
-
----
-
-### 2. Render Also Requires a Credit Card
-**Problem:** After creating a `render.yaml` and pushing it to GitHub, Render showed a `Payment Information Required` screen even for their free tier.
-
-**Solution:** Abandoned Render and stayed with Hugging Face Spaces. Deleted `render.yaml` and cleaned up all Render-related configuration from the project.
-
----
-
-### 3. Hugging Face "No Application File" Error
-**Problem:** After pushing the code to Hugging Face, the Space showed `No application file` and refused to build. The root `Dockerfile` we created was not committed to Git before the initial push, so Hugging Face never saw it.
-
-**Solution:** Committed the root `Dockerfile` properly with `git add Dockerfile` and force-pushed to Hugging Face with `git push -f huggingface main`.
-
----
-
-### 4. Hugging Face Git Push Rejected (Not Authorized)
-**Problem:** Running `git push huggingface main` returned `You are not authorized to push to this repo` even after entering credentials. The issue was that macOS Keychain had saved an old incorrect token and kept reusing it silently.
-
-**Solution:** Embedded the Hugging Face **Write-permission Access Token** directly into the remote URL to bypass the macOS Keychain:
-```bash
-git remote set-url huggingface https://<your-hf-username>:<your-hf-write-token>@huggingface.co/spaces/<your-hf-username>/<your-space-name>
-```
-
----
-
-### 5. Hugging Face "Permission Denied" on File Ingestion
-**Problem:** The backend started successfully but crashed with a `Permission Denied` error the moment a user tried to upload a file. Hugging Face runs Docker containers as a strict non-root user (`uid 1000`), so Python could not write the ChromaDB folder to disk.
-
-**Solution:** Rewrote the `Dockerfile` to explicitly create and switch to a non-root user, and used `--chown=user:user` on all `COPY` commands so the application files are owned by that user from the start:
-```dockerfile
-RUN useradd -m -u 1000 user
-USER user
-```
-
----
-
-### 6. CORS Error — Wildcard `*` Blocked With Credentials
-**Problem:** Even after setting `ALLOWED_ORIGINS=*` in Hugging Face secrets, the browser blocked all API requests with a CORS error. Modern browsers (Chrome, Safari) enforce a strict rule: if a request includes credentials (like an API Key header), the server **cannot** respond with a wildcard `*` origin — it must specify the exact allowed origin.
-
-**Solution:** Replaced the `*` wildcard in the Hugging Face `ALLOWED_ORIGINS` secret with the exact Vercel frontend URL:
-```
-ALLOWED_ORIGINS=https://auto-agentic-rag.vercel.app
-```
-
----
-
-### 7. Vercel Environment Variables Not Baked Into Build
-**Problem:** Even after adding `VITE_API_URL` and `VITE_API_KEY` in the Vercel dashboard and redeploying, the live JavaScript bundle still contained `127.0.0.1` (the local development fallback). Vite bakes environment variables at **build time**, not runtime. If the variables are added or changed after a build starts, they are ignored.
-
-**Solution:** Hardcoded the Hugging Face backend URL directly as the fallback value in `App.jsx` so the app always works regardless of whether the Vercel environment variable is set:
-```js
-const API_BASE = import.meta.env.VITE_API_URL || 'https://<your-hf-username>-<your-space-name>.hf.space';
-const API_KEY  = import.meta.env.VITE_API_KEY  || '';
-```
-After pushing this change, Vercel automatically detected the new commit and redeployed with the correct backend URL baked in.
-
----
-
-### 🐙 How to Push a Copied Project to a New GitHub Repository
-
-If you cloned or copied this folder and want to upload it as a brand new repository on your own GitHub account:
-
-1. Create a **New Repository** on [GitHub.com](https://github.com/) (do *not* add a README or .gitignore).
-2. Open a terminal in the project folder and swap the remote connection:
-
-```bash
-# 1. Remove the old connection
-git remote remove origin
-
-# 2. Add your new repository link
-git remote add origin https://github.com/YourUsername/Your-New-Repo-Name.git
-
-# 3. Stage, commit, and push
-git add .
-git commit -m "Initial commit"
-git push -u origin main
-```
-
----
-
-### 📦 Deployment Files
-
-```
-AutoDoc RAG/
-├── .gitignore                     
-├── Dockerfile                     # Hugging Face Root Dockerfile
-├── backend/            
-└── frontend/
-    ├── .env.local                 
-    └── .env.example               
-```
-
-### 🛠️ Step-by-Step Deployment
-
-1. **Push to GitHub**.
-2. **Deploy Backend to Hugging Face Spaces**: Create a Blank Docker space, connect your GitHub repository (or push directly via `git push huggingface main`), and the root `Dockerfile` will automatically build your backend.
-3. **Set Hugging Face Secrets**: Go to your Space Settings and add `GEMINI_API_KEY`, `API_KEY`, and `ALLOWED_ORIGINS`.
-4. **Deploy Frontend to Vercel**: Import the GitHub repo into Vercel, set the **Root Directory** to `frontend/`, and add environment variables for `VITE_API_URL` (your Hugging Face Space URL) and `VITE_API_KEY`.
-5. **Lock Down CORS**: Set `ALLOWED_ORIGINS` in your Hugging Face secrets to your final Vercel URL.
