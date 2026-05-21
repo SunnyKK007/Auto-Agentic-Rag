@@ -3,6 +3,13 @@ import { useState, useRef, useEffect } from 'react';
 // Reads from .env.local in development, or from Vercel env vars in production.
 // Set VITE_API_URL=https://your-app.fly.dev in the Vercel dashboard.
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_KEY = import.meta.env.VITE_API_KEY || '';
+const SESSION_STORAGE_KEY = 'autodoc-rag-session-id';
+
+const createSessionId = () => {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
 
 function App() {
   const [messages, setMessages] = useState([
@@ -15,8 +22,22 @@ function App() {
   const [clearPrevious, setClearPrevious] = useState(true);
   const [driveFolderId, setDriveFolderId] = useState('');
   const [isDriveUploading, setIsDriveUploading] = useState(false);
+  const [sessionId] = useState(() => {
+    const existing = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (existing) return existing;
+    const next = createSessionId();
+    localStorage.setItem(SESSION_STORAGE_KEY, next);
+    return next;
+  });
   const messagesEndRef = useRef(null);
   const isIngesting = isUploading || isDriveUploading;
+
+  const apiHeaders = (json = false) => {
+    const headers = {};
+    if (json) headers['Content-Type'] = 'application/json';
+    if (API_KEY) headers['X-API-Key'] = API_KEY;
+    return headers;
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -26,11 +47,12 @@ function App() {
     scrollToBottom();
   }, [messages, isQuerying]);
 
-  const pollIngestionStatus = async (jobId, selectedFiles) => {
-    const fileNames = selectedFiles.map((file) => file.name);
+  const pollIngestionStatus = async (jobId, itemNames, progressLabel = 'Ingesting documents') => {
 
     for (let attempt = 0; attempt < 120; attempt += 1) {
-      const statusResponse = await fetch(`${API_BASE}/api/ingest/status/${jobId}`);
+      const statusResponse = await fetch(`${API_BASE}/api/ingest/status/${jobId}`, {
+        headers: apiHeaders(),
+      });
       if (!statusResponse.ok) {
         throw new Error('Could not check ingestion status.');
       }
@@ -61,7 +83,7 @@ function App() {
 
       setUploadStatus({
         type: 'success',
-        message: `Ingesting documents: ${fileNames.join(', ')}`,
+        message: `${progressLabel}: ${itemNames.join(', ')}`,
       });
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
@@ -88,10 +110,12 @@ function App() {
       formData.append('files', file);
     });
     formData.append('clear_previous', clearPrevious);
+    formData.append('session_id', sessionId);
 
     try {
       const response = await fetch(`${API_BASE}/api/ingest`, {
         method: 'POST',
+        headers: apiHeaders(),
         body: formData,
       });
 
@@ -101,7 +125,11 @@ function App() {
           type: 'success',
           message: data.message || `Ingesting documents: ${selectedFiles.map((file) => file.name).join(', ')}`,
         });
-        await pollIngestionStatus(data.job_id, selectedFiles);
+        await pollIngestionStatus(
+          data.job_id,
+          selectedFiles.map((file) => file.name),
+          'Ingesting documents'
+        );
         if (clearPrevious) {
           setMessages([{ role: 'assistant', content: 'Hello! I am your Agentic RAG assistant. Upload some documents and ask me anything.' }]);
         }
@@ -121,26 +149,35 @@ function App() {
   const handleDriveUpload = async () => {
     const driveInput = driveFolderId.trim();
     if (!driveInput || isIngesting) return;
+    const driveLinks = driveInput
+      .split(/[\n,]+/)
+      .map((link) => link.trim())
+      .filter(Boolean);
 
     setIsDriveUploading(true);
     setUploadStatus({
       type: 'success',
-      message: `Ingesting Google Drive link: ${driveInput}`,
+      message: `Ingesting Google Drive links: ${driveLinks.join(', ')}`,
     });
 
     try {
       const response = await fetch(`${API_BASE}/api/ingest/drive`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folder_id: driveInput, clear_previous: clearPrevious }),
+        headers: apiHeaders(true),
+        body: JSON.stringify({
+          drive_links: driveLinks,
+          clear_previous: clearPrevious,
+          session_id: sessionId,
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setUploadStatus({
           type: 'success',
-          message: data.message || `Successfully ingested Google Drive link: ${driveInput}`,
+          message: data.message || `Ingesting Google Drive links: ${driveLinks.join(', ')}`,
         });
+        await pollIngestionStatus(data.job_id, driveLinks, 'Ingesting Google Drive links');
         if (clearPrevious) {
           setMessages([{ role: 'assistant', content: 'Hello! I am your Agentic RAG assistant. Upload some documents and ask me anything.' }]);
         }
@@ -169,10 +206,8 @@ function App() {
     try {
       const response = await fetch(`${API_BASE}/api/query`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ question: userQuery }),
+        headers: apiHeaders(true),
+        body: JSON.stringify({ question: userQuery, session_id: sessionId }),
       });
 
       if (response.ok) {
@@ -258,15 +293,14 @@ function App() {
             </div>
 
             <div className="w-full flex flex-col gap-2">
-              <input
-                type="text"
-                placeholder="Paste Drive URL or Folder ID"
+              <textarea
+                placeholder="Paste Drive links or folder IDs"
                 value={driveFolderId}
                 onChange={(e) => setDriveFolderId(e.target.value)}
-                className="w-full glass-input rounded-xl px-4 py-2 text-white placeholder-slate-500 text-sm"
+                className="w-full glass-input rounded-xl px-4 py-2 text-white placeholder-slate-500 text-sm resize-none min-h-20"
                 disabled={isIngesting}
               />
-              <p className="text-xs text-slate-500 text-left px-1">Paste the full Google Drive link or just the folder/file ID.</p>
+              <p className="text-xs text-slate-500 text-left px-1">Paste one or more Google Drive links or IDs, separated by new lines or commas.</p>
               <button
                 onClick={handleDriveUpload}
                 disabled={!driveFolderId.trim() || isIngesting}
