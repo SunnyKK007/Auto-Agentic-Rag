@@ -8,6 +8,12 @@ pinned: false
 ---
 # 🤖 AutoDoc RAG System
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://auto-agentic-rag.vercel.app/)
+[![Backend](https://img.shields.io/badge/Backend-Hugging%20Face-yellow?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/Sunny9523/Agentic-Rag)
+[![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blue?style=for-the-badge&logo=react)](https://auto-agentic-rag.vercel.app/)
+
+> 🚀 **[Try it Live → https://auto-agentic-rag.vercel.app](https://auto-agentic-rag.vercel.app/)**
+
 A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) system** built with a **FastAPI** backend and a **React + Vite** frontend. The system uses a stateful **LangGraph** agent to retrieve relevant document chunks from ChromaDB, gate results by similarity score, answer with Gemini when document context is strong enough, and fall back to live DuckDuckGo web search when the uploaded documents do not contain the answer. It supports ingestion from local file uploads as well as directly from **Google Drive**.
 
 ---
@@ -418,13 +424,13 @@ In short: the API layer is async-friendly, while heavy synchronous work is moved
 
 ## ☁️ Production Deployment (100% Free)
 
-This project is configured for a **fully free** production deployment requiring absolutely no credit cards:
+This project is deployed and live! No credit cards required:
 
-| Layer | Platform | Cost |
+| Layer | Platform | Live URL |
 |---|---|---|
-| **Frontend** | [Vercel](https://vercel.com) | Free forever |
-| **Backend** | [Hugging Face Spaces](https://huggingface.co/spaces) | Free tier (Docker Template) |
-| **Vector DB** | ChromaDB inside Docker | Free ephemeral storage |
+| **Frontend** | [Vercel](https://vercel.com) | [https://auto-agentic-rag.vercel.app](https://auto-agentic-rag.vercel.app/) |
+| **Backend** | [Hugging Face Spaces](https://huggingface.co/spaces) | [https://sunny9523-agentic-rag.hf.space](https://sunny9523-agentic-rag.hf.space) |
+| **Vector DB** | ChromaDB inside Docker | Bundled with backend |
 | **LLM** | Google Gemini API | Free tier (15 req/min) |
 
 ---
