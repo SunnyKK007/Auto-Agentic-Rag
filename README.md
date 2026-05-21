@@ -1,3 +1,11 @@
+---
+title: Agentic Rag
+emoji: 👀
+colorFrom: green
+colorTo: purple
+sdk: docker
+pinned: false
+---
 # 🤖 AutoDoc RAG System
 
 A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) system** built with a **FastAPI** backend and a **React + Vite** frontend. The system uses a stateful **LangGraph** agent to retrieve relevant document chunks from ChromaDB, gate results by similarity score, answer with Gemini when document context is strong enough, and fall back to live DuckDuckGo web search when the uploaded documents do not contain the answer. It supports ingestion from local file uploads as well as directly from **Google Drive**.
@@ -9,12 +17,14 @@ A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) syste
 | Feature | Description |
 |---|---|
 | **Multi-file Local Ingestion** | Supports selecting multiple PDF, TXT, and CSV files in one upload. Chunks, embeds, and stores in ChromaDB automatically. |
-| **Ingestion Status Tracking** | Local uploads run in the background and the UI polls job status until files are successfully ingested. |
-| **Google Drive Ingestion** | Paste a Google Drive folder URL, Google Doc/Sheet/Slides link, PDF link, or bare ID. Public links and files shared with the authenticated account can be ingested. |
+| **Ingestion Status Tracking** | Local uploads and Drive ingestion run in the background and the UI polls job status until ingestion completes. |
+| **Google Drive Ingestion** | Paste one or more Google Drive folder URLs, Google Doc/Sheet/Slides links, PDF links, or bare IDs. Public links and files shared with the authenticated account can be ingested. |
 | **Agentic Web Search** | If documents don't contain the answer, the agent searches the live web via DuckDuckGo (free, no API key). |
 | **Score-based Relevance Gate** | Uses Chroma relevance scores instead of an extra LLM relevance-grading call, reducing Gemini quota usage. |
-| **Session Isolation** | "Clear previous session" toggle wipes the vector store and chat history before new uploads. |
+| **Session Isolation** | Each browser session gets a separate ChromaDB collection. "Clear previous session" wipes only that session's collection. |
+| **Optional API-Key Auth** | Set `API_KEY` on the backend and `VITE_API_KEY` on the frontend to protect API endpoints before deployment. |
 | **Batch Embedding** | Chunks are embedded 10 at a time (not one-by-one), making ingestion ~10x faster. |
+| **Backend Contract Tests** | Includes `unittest` coverage for API-key auth, Drive link splitting, and Drive ingestion job status. |
 | **Premium UI** | Glassmorphic, dark-themed React frontend with smooth animations and an "Agent is thinking..." indicator. |
 | **Robust Error Handling** | Auto-heals corrupted ChromaDB, sanitizes metadata, handles empty files, and provides clear error messages. |
 
@@ -60,8 +70,9 @@ AutoDoc RAG/
 │   ├── database.py         # ChromaDB wrapper (add, search, clear)
 │   ├── drive_loader.py     # Google Drive API integration (OAuth 2.0)
 │   ├── config.py           # Pydantic settings — reads from .env
+│   ├── tests/              # Backend API contract tests
 │   ├── requirements.txt    # All Python dependencies
-│   ├── .env                # Your secrets (GEMINI_API_KEY)
+│   ├── .env.example        # Example backend environment variables
 │   ├── credentials.json    # Google OAuth credentials (you provide this)
 │   └── chroma_db/          # Auto-created local vector store
 └── frontend/
@@ -126,21 +137,26 @@ AutoDoc RAG/
 
 ### `POST /api/ingest`
 Uploads and ingests one or more local files into the vector store. Ingestion runs in the background so large files do not block the HTTP request.
-- **Body:** `multipart/form-data` — `files` (one or more PDF/TXT/CSV files), `clear_previous` (bool)
+- **Auth:** optional `X-API-Key` header when `API_KEY` is configured.
+- **Body:** `multipart/form-data` — `files` (one or more PDF/TXT/CSV files), `clear_previous` (bool), `session_id` (string)
 - **Response:** `{ "job_id": "...", "files": ["file1.pdf"], "message": "Ingesting 1 file: file1.pdf" }`
 
 ### `GET /api/ingest/status/{job_id}`
-Checks the status of a background local-file ingestion job.
-- **Response:** `{ "status": "processing|completed|failed", "files": [...], "completed": [...], "failed": [...] }`
+Checks the status of a background local-file or Drive ingestion job.
+- **Auth:** optional `X-API-Key` header when `API_KEY` is configured.
+- **Response:** `{ "status": "processing|completed|failed", "kind": "local|drive", "session_id": "...", "files": [...], "completed": [...], "failed": [...] }`
 
 ### `POST /api/ingest/drive`
-Ingests documents from a Google Drive folder or single file URL. This endpoint currently accepts one Drive link or ID per request.
-- **Body:** `{ "folder_id": "<url-or-id>", "clear_previous": true }`
-- **Response:** `{ "message": "Successfully ingested Google Drive link: ..." }`
+Ingests documents from one or more Google Drive folder/file URLs or IDs. Ingestion runs as a background job and supports arrays, comma-separated input, or newline-separated input.
+- **Auth:** optional `X-API-Key` header when `API_KEY` is configured.
+- **Body:** `{ "drive_links": ["<url-or-id-1>", "<url-or-id-2>"], "clear_previous": true, "session_id": "..." }`
+- **Legacy body still accepted:** `{ "folder_id": "<url-or-id>", "clear_previous": true, "session_id": "..." }`
+- **Response:** `{ "job_id": "...", "files": [...], "message": "Ingesting 2 Google Drive links." }`
 
 ### `POST /api/query`
 Sends a question to the LangGraph agent and returns an answer.
-- **Body:** `{ "question": "What is the refund policy?" }`
+- **Auth:** optional `X-API-Key` header when `API_KEY` is configured.
+- **Body:** `{ "question": "What is the refund policy?", "session_id": "..." }`
 - **Response:** `{ "answer": "According to the document..." }`
 
 Swagger UI: `http://localhost:8000/docs`
@@ -159,14 +175,17 @@ Swagger UI: `http://localhost:8000/docs`
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate        # On Windows: venv\Scripts\activate
+source venv/bin/activate        # On Windows: venv\Scriptsctivate
 pip install -r requirements.txt
 ```
 
 Create a `.env` file in `backend/`:
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
+API_KEY=change_this_before_deploying
 MIN_RELEVANCE_SCORE=0.50
+ALLOWED_ORIGINS=http://localhost:5173
+CHROMA_DB_DIR=./chroma_db
 ```
 
 Start the server:
@@ -182,7 +201,34 @@ npm install
 npm run dev
 ```
 
+Create `frontend/.env.local` for local development:
+```env
+VITE_API_URL=http://127.0.0.1:8000
+VITE_API_KEY=change_this_before_deploying
+```
+
+If `API_KEY` is left empty in the backend, API-key auth is disabled. For production, set both `API_KEY` and `VITE_API_KEY` to the same strong secret.
+
 Open: `http://localhost:5173`
+
+---
+
+## ✅ Tests
+
+Run backend contract tests:
+
+```bash
+cd backend
+source venv/bin/activate
+python -m unittest discover -s tests
+```
+
+Run frontend production build check:
+
+```bash
+cd frontend
+npm run build
+```
 
 ---
 
@@ -209,9 +255,17 @@ Unsupported or inaccessible files are skipped or reported as errors. Images and 
 | Variable | Default | Description |
 |---|---|---|
 | `GEMINI_API_KEY` | `""` | Your Google Gemini API key |
+| `API_KEY` | `""` | Optional API key. When set, protected endpoints require `X-API-Key`. |
 | `CHROMA_DB_DIR` | `./chroma_db` | Local ChromaDB storage path |
 | `MIN_RELEVANCE_SCORE` | `0.50` | Minimum Chroma relevance score needed to answer from uploaded documents. Lower trusts docs more; higher routes to web search more often. |
 | `ALLOWED_ORIGINS` | `*` | Allowed CORS origins |
+
+Frontend variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_API_URL` | `http://127.0.0.1:8000` | Backend API base URL. |
+| `VITE_API_KEY` | `""` | API key sent to the backend as `X-API-Key` when backend auth is enabled. |
 
 ---
 
@@ -266,7 +320,7 @@ Unsupported or inaccessible files are skipped or reported as errors. Images and 
 ### 8. Cross-Document Answer Leakage
 **Problem:** After uploading Doc B, the agent could still answer from Doc A if Doc A was already stored in the same vector database.
 
-**Solution:** Added a **Clear previous session** checkbox in the UI. When checked, the backend calls `vector_store.clear()` before ingesting new files or Drive content, and the frontend resets chat history.
+**Solution:** Added browser-session isolation and a **Clear previous session** checkbox. Each browser session now maps to its own ChromaDB collection, and clearing removes only that session's data before ingesting new files or Drive content.
 
 ### 9. Only One Local File Could Be Uploaded
 **Problem:** The frontend only read `files[0]`, and the backend accepted only one `UploadFile`.
@@ -293,6 +347,26 @@ Unsupported or inaccessible files are skipped or reported as errors. Images and 
 
 **Solution:** Updated the frontend to block local upload while Drive ingestion is running and block Drive ingestion while local upload is running. The UI now clearly shows when Drive ingestion is in progress.
 
+### 14. Drive Ingestion Accepted Only One Link
+**Problem:** The Drive endpoint accepted a single `folder_id`, so users could not paste multiple Drive links at once.
+
+**Solution:** Updated the API to accept `drive_links: list[str]` while keeping legacy `folder_id` support. The frontend now accepts newline-separated or comma-separated Drive links.
+
+### 15. Drive Ingestion Had No Progress Polling
+**Problem:** Drive ingestion was synchronous from the UI's perspective and did not expose per-link completion/failure status.
+
+**Solution:** Drive ingestion now creates the same `job_id` status object used by local uploads. The frontend polls `GET /api/ingest/status/{job_id}` until all Drive links complete or fail.
+
+### 16. API Endpoints Were Unprotected
+**Problem:** Public deployment would expose ingestion and query endpoints without a simple protection layer.
+
+**Solution:** Added optional API-key auth. When `API_KEY` is configured, protected endpoints require the `X-API-Key` header. The frontend sends `VITE_API_KEY`.
+
+### 17. No Formal API Tests
+**Problem:** The project had compile/build checks, but no repeatable backend contract tests.
+
+**Solution:** Added `backend/tests/test_api.py` using Python's built-in `unittest` plus FastAPI `TestClient`. The tests cover API-key enforcement, Drive link splitting, and multi-link Drive job status.
+
 ---
 
 ## 📊 Architecture Decisions
@@ -303,6 +377,8 @@ Unsupported or inaccessible files are skipped or reported as errors. Images and 
 | **ChromaDB over FAISS** | ChromaDB persists to disk automatically, supports metadata, and has a cleaner Python API for this project. |
 | **Gemini 2.5 Flash** | Good balance of speed, cost, and instruction-following for answer generation. |
 | **Chroma score gate over LLM relevance grading** | Reduces latency and Gemini quota usage by avoiding an extra LLM call per query. |
+| **Session-scoped Chroma collections** | Keeps browser sessions isolated without requiring a full user-account system. |
+| **API-key auth before full OAuth** | Provides a practical deployment guard while keeping the portfolio app simple. |
 | **DuckDuckGo over Tavily** | No API key required and simple to run locally. |
 | **Google Drive API directly** | Provides full control over download vs. export logic for Google Workspace files. |
 | **Batch size of 10** | Balances ingestion speed with API rate-limit safety. |
@@ -331,13 +407,12 @@ In short: the API layer is async-friendly, while heavy synchronous work is moved
 | Limitation | Suggested Fix |
 |---|---|
 | No conversation memory | Add chat history to `GraphState` for multi-turn context. |
-| Drive ingestion accepts one link per request | Add newline/comma-separated Drive links and process them as a batch. |
-| Drive ingestion has no progress bar | Use background jobs, `StreamingResponse`, or WebSockets for Drive progress. |
-| ChromaDB is local only | Migrate to Pinecone, Weaviate, or another managed vector database for cloud-native persistence. |
-| No authentication | Add JWT/OAuth before exposing the API publicly. |
-| Single collection for all docs | Implement per-user or per-session ChromaDB collections for true multi-tenancy. |
+| ChromaDB is still local/self-hosted | Migrate to Pinecone, Weaviate, Qdrant Cloud, or Chroma Cloud for managed vector storage. |
+| API-key auth is not full user login | Add Clerk, Auth0, Firebase Auth, or Supabase Auth for real user accounts. |
+| Session isolation is browser-based | Map authenticated user IDs to collections after adding full login. |
 | DuckDuckGo can be unreliable | Swap to Tavily or SerpAPI for more reliable structured search results. |
 | No OCR for images/videos | Add OCR and media extraction for scanned PDFs, images, or video transcripts. |
+| Not deployed by this repository alone | Push to GitHub, deploy the frontend to Vercel, deploy the backend to Fly.io, and configure secrets in each platform. |
 
 ---
 
@@ -351,6 +426,28 @@ This project is configured for a **fully free** production deployment:
 | **Backend** | [Fly.io](https://fly.io) | Free tier (160 GB-hours/month) |
 | **Vector DB** | ChromaDB on Fly.io Volume | 1 GB free volume |
 | **LLM** | Google Gemini API | Free tier (15 req/min) |
+
+---
+
+### 🐙 How to Push a Copied Project to a New GitHub Repository
+
+If you cloned or copied this folder and want to upload it as a brand new repository on your own GitHub account:
+
+1. Create a **New Repository** on [GitHub.com](https://github.com/) (do *not* add a README or .gitignore).
+2. Open a terminal in the project folder and swap the remote connection:
+
+```bash
+# 1. Remove the old connection
+git remote remove origin
+
+# 2. Add your new repository link
+git remote add origin https://github.com/YourUsername/Your-New-Repo-Name.git
+
+# 3. Stage, commit, and push
+git add .
+git commit -m "Initial commit"
+git push -u origin main
+```
 
 ---
 
@@ -372,5 +469,6 @@ AutoDoc RAG/
 
 1. **Push to GitHub** (Private repo).
 2. **Deploy Backend to Fly.io** (Using `flyctl launch` and `flyctl deploy`).
-3. **Deploy Frontend to Vercel** (Connect repo and set `VITE_API_URL`).
-4. **Lock Down CORS** (Set `ALLOWED_ORIGINS` in Fly secrets).
+3. **Set Fly.io secrets** for `GEMINI_API_KEY`, `API_KEY`, `ALLOWED_ORIGINS`, and any production `CHROMA_DB_DIR`.
+4. **Deploy Frontend to Vercel** (Connect repo and set `VITE_API_URL` and `VITE_API_KEY`).
+5. **Lock Down CORS** (Set `ALLOWED_ORIGINS` in Fly secrets to your Vercel URL).
