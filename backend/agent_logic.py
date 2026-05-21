@@ -86,15 +86,29 @@ def generate_answer(state: GraphState) -> GraphState:
         response = llm.invoke([sys_msg, human_msg])
         return {"answer": response.content}
     except Exception as e:
+        error_str = str(e).lower()
+        is_quota_error = any(kw in error_str for kw in [
+            "quota", "resource_exhausted", "429", "rate limit", "exhausted", "token"
+        ])
         print(f"Error generating answer: {e}")
         if state.get("used_web_search") and docs_text.strip():
+            if is_quota_error:
+                return {
+                    "answer": (
+                        "⚠️ I found related information from web search, but the LLM could not "
+                        "summarize it right now because of token exhaustion. "
+                        "The Gemini API free-tier quota has been reached. Please wait a minute and try again."
+                    )
+                }
             return {
                 "answer": (
-                    "I found related information from web search, but the LLM could "
-                    f"not summarize it right now.\n\n{docs_text}"
+                    "I found related information from web search, but an error occurred "
+                    f"while generating the answer. Please try again.\n\n{docs_text}"
                 )
             }
-        return {"answer": "An error occurred while generating the answer."}
+        if is_quota_error:
+            return {"answer": "⚠️ Error due to token exhaustion. The Gemini API free-tier quota has been reached. Please wait a minute and try again."}
+        return {"answer": "An error occurred while generating the answer. Please try again."}
 
 def check_hallucination(state: GraphState) -> GraphState:
     """No-op node kept for graph compatibility without spending an LLM call."""
