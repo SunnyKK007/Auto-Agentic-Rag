@@ -16,10 +16,11 @@ class Settings(BaseSettings):
         use_local_llm: Flag indicating whether to use local Ollama model instead of Gemini.
     """
     gemini_api_key: str = ""
+    api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
     chunk_size: int = 800
     chunk_overlap: int = 80  # 10% of 800
-    min_relevance_score: float = 0.50
+    min_relevance_score: float = 0.40
     # In production (Fly.io) this is overridden by the [env] block in fly.toml
     # pointing to the persistent volume at /data/chroma_db.
     # Locally it falls back to ./chroma_db for development.

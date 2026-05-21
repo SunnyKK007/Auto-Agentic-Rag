@@ -13,6 +13,7 @@ from config import settings
 class GraphState(TypedDict):
     """Represents the state of our graph."""
     question: str
+    session_id: str
     documents: List[str]
     relevance_scores: List[float]
     answer: str
@@ -32,7 +33,8 @@ def plan_search(state: GraphState) -> GraphState:
 def retrieve(state: GraphState) -> GraphState:
     """Retrieve documents and keep their relevance scores."""
     question = state["question"]
-    results = vector_store.similarity_search_with_scores(question, k=4)
+    session_id = state.get("session_id", "default")
+    results = vector_store.similarity_search_with_scores(question, k=4, session_id=session_id)
     doc_contents = [doc.page_content for doc, _ in results]
     scores = [score for _, score in results]
     if scores:
@@ -126,10 +128,11 @@ workflow.add_edge("check_hallucination", END)
 
 agent_app = workflow.compile()
 
-def run_agent(question: str) -> str:
+def run_agent(question: str, session_id: str = "default") -> str:
     """Run the agentic RAG system for a query."""
     initial_state = {
         "question": question,
+        "session_id": session_id,
         "needs_web_search": False,
         "used_web_search": False,
     }

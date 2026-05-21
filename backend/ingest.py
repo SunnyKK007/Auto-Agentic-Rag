@@ -80,7 +80,7 @@ def split_documents(documents: List[Document]) -> List[Document]:
     )
     return text_splitter.split_documents(documents)
 
-def process_and_ingest_file(file_path: str, vector_store) -> bool:
+def process_and_ingest_file(file_path: str, vector_store, session_id: str = "default") -> bool:
     """
     Complete pipeline to load, split, and ingest a file into the vector store.
     
@@ -127,12 +127,12 @@ def process_and_ingest_file(file_path: str, vector_store) -> bool:
         batch_num = i // BATCH_SIZE + 1
         print(f"[Ingest] Embedding batch {batch_num}/{total_batches} ({len(batch)} chunks)...")
         try:
-            vector_store.add_documents(batch)
+            vector_store.add_documents(batch, session_id=session_id)
         except IndexError as ie:
             print(f"[Ingest] Batch {batch_num} had an indexing error: {ie}. Falling back to one-by-one.")
             for chunk in batch:
                 try:
-                    vector_store.add_documents([chunk])
+                    vector_store.add_documents([chunk], session_id=session_id)
                 except Exception as e:
                     print(f"[Ingest] Skipping chunk due to error: {e}")
         except Exception as e:
@@ -141,7 +141,7 @@ def process_and_ingest_file(file_path: str, vector_store) -> bool:
     print(f"[Ingest] Successfully ingested {total} chunks from {os.path.basename(file_path)}.")
     return True
 
-def process_and_ingest_drive_folder(folder_id: str, vector_store) -> bool:
+def process_and_ingest_drive_folder(folder_id: str, vector_store, session_id: str = "default") -> bool:
     """
     Pipeline to load from Google Drive, split, and ingest.
     Uses batch embedding for significantly faster performance.
@@ -178,12 +178,12 @@ def process_and_ingest_drive_folder(folder_id: str, vector_store) -> bool:
         batch_num = i // BATCH_SIZE + 1
         print(f"[Ingest Drive] Embedding batch {batch_num}/{total_batches} ({len(batch)} chunks)...")
         try:
-            vector_store.add_documents(batch)
+            vector_store.add_documents(batch, session_id=session_id)
         except Exception as e:
             print(f"[Ingest Drive] Failed batch {batch_num}: {e}. Falling back to one-by-one.")
             for chunk in batch:
                 try:
-                    vector_store.add_documents([chunk])
+                    vector_store.add_documents([chunk], session_id=session_id)
                 except Exception as inner_e:
                     print(f"[Ingest Drive] Skipping chunk due to error: {inner_e}")
 
