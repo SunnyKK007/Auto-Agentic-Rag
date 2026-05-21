@@ -215,11 +215,22 @@ function App() {
         setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
       } else {
         const errorData = await response.json();
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorData.detail || 'Failed to get response'}` }]);
+        const detail = (errorData.detail || '').toString().toLowerCase();
+        const isQuotaError =
+          response.status === 429 ||
+          detail.includes('quota') ||
+          detail.includes('resource_exhausted') ||
+          detail.includes('token') ||
+          detail.includes('rate limit') ||
+          detail.includes('exhausted');
+        const errorMessage = isQuotaError
+          ? '⚠️ Error due to token exhaustion. The Gemini API free-tier quota has been reached. Please wait a minute and try again.'
+          : 'An error occurred while generating the answer. Please try again.';
+        setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
       }
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Network error. Is the backend running?' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'An error occurred while generating the answer. Please try again.' }]);
     } finally {
       setIsQuerying(false);
     }
