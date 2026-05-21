@@ -412,19 +412,19 @@ In short: the API layer is async-friendly, while heavy synchronous work is moved
 | Session isolation is browser-based | Map authenticated user IDs to collections after adding full login. |
 | DuckDuckGo can be unreliable | Swap to Tavily or SerpAPI for more reliable structured search results. |
 | No OCR for images/videos | Add OCR and media extraction for scanned PDFs, images, or video transcripts. |
-| Not deployed by this repository alone | Push to GitHub, deploy the frontend to Vercel, deploy the backend to Fly.io, and configure secrets in each platform. |
+| Not deployed by this repository alone | Push to GitHub, deploy the frontend to Vercel, deploy the backend to Hugging Face, and configure secrets in each platform. |
 
 ---
 
 ## ☁️ Production Deployment (100% Free)
 
-This project is configured for a **fully free** production deployment:
+This project is configured for a **fully free** production deployment requiring absolutely no credit cards:
 
 | Layer | Platform | Cost |
 |---|---|---|
 | **Frontend** | [Vercel](https://vercel.com) | Free forever |
-| **Backend** | [Fly.io](https://fly.io) | Free tier (160 GB-hours/month) |
-| **Vector DB** | ChromaDB on Fly.io Volume | 1 GB free volume |
+| **Backend** | [Hugging Face Spaces](https://huggingface.co/spaces) | Free tier (Docker Template) |
+| **Vector DB** | ChromaDB inside Docker | Free ephemeral storage |
 | **LLM** | Google Gemini API | Free tier (15 req/min) |
 
 ---
@@ -456,10 +456,8 @@ git push -u origin main
 ```
 AutoDoc RAG/
 ├── .gitignore                     
-├── backend/
-│   ├── Dockerfile                 
-│   ├── fly.toml                   
-│   └── .dockerignore              
+├── Dockerfile                     # Hugging Face Root Dockerfile
+├── backend/            
 └── frontend/
     ├── .env.local                 
     └── .env.example               
@@ -467,8 +465,8 @@ AutoDoc RAG/
 
 ### 🛠️ Step-by-Step Deployment
 
-1. **Push to GitHub** (Private repo).
-2. **Deploy Backend to Fly.io** (Using `flyctl launch` and `flyctl deploy`).
-3. **Set Fly.io secrets** for `GEMINI_API_KEY`, `API_KEY`, `ALLOWED_ORIGINS`, and any production `CHROMA_DB_DIR`.
-4. **Deploy Frontend to Vercel** (Connect repo and set `VITE_API_URL` and `VITE_API_KEY`).
-5. **Lock Down CORS** (Set `ALLOWED_ORIGINS` in Fly secrets to your Vercel URL).
+1. **Push to GitHub**.
+2. **Deploy Backend to Hugging Face Spaces**: Create a Blank Docker space, connect your GitHub repository (or push directly via `git push huggingface main`), and the root `Dockerfile` will automatically build your backend.
+3. **Set Hugging Face Secrets**: Go to your Space Settings and add `GEMINI_API_KEY`, `API_KEY`, and `ALLOWED_ORIGINS`.
+4. **Deploy Frontend to Vercel**: Import the GitHub repo into Vercel, set the **Root Directory** to `frontend/`, and add environment variables for `VITE_API_URL` (your Hugging Face Space URL) and `VITE_API_KEY`.
+5. **Lock Down CORS**: Set `ALLOWED_ORIGINS` in your Hugging Face secrets to your final Vercel URL.
