@@ -435,6 +435,74 @@ This project is deployed and live! No credit cards required:
 
 ---
 
+## 🚧 Deployment Challenges & How We Solved Them
+
+Getting this project live was not straightforward. Here is a full honest log of every problem we hit and how we fixed it.
+
+### 1. Fly.io Machine Quota Exceeded (0 Apps, Still Blocked)
+**Problem:** Even though the account had zero apps, Fly.io returned `requested machine count exceeds organization limit`. Fly.io silently blocks brand new accounts from creating any machines as an anti-bot measure.
+
+**Solution:** Pivoted away from Fly.io entirely. Fly.io requires a verified credit card to lift the machine quota on new accounts. We switched to **Hugging Face Spaces** which requires no credit card and supports Docker deployments natively.
+
+---
+
+### 2. Render Also Requires a Credit Card
+**Problem:** After creating a `render.yaml` and pushing it to GitHub, Render showed a `Payment Information Required` screen even for their free tier.
+
+**Solution:** Abandoned Render and stayed with Hugging Face Spaces. Deleted `render.yaml` and cleaned up all Render-related configuration from the project.
+
+---
+
+### 3. Hugging Face "No Application File" Error
+**Problem:** After pushing the code to Hugging Face, the Space showed `No application file` and refused to build. The root `Dockerfile` we created was not committed to Git before the initial push, so Hugging Face never saw it.
+
+**Solution:** Committed the root `Dockerfile` properly with `git add Dockerfile` and force-pushed to Hugging Face with `git push -f huggingface main`.
+
+---
+
+### 4. Hugging Face Git Push Rejected (Not Authorized)
+**Problem:** Running `git push huggingface main` returned `You are not authorized to push to this repo` even after entering credentials. The issue was that macOS Keychain had saved an old incorrect token and kept reusing it silently.
+
+**Solution:** Embedded the Hugging Face **Write-permission Access Token** directly into the remote URL to bypass the macOS Keychain:
+```bash
+git remote set-url huggingface https://Sunny9523:YOUR_WRITE_TOKEN@huggingface.co/spaces/Sunny9523/Agentic-Rag
+```
+
+---
+
+### 5. Hugging Face "Permission Denied" on File Ingestion
+**Problem:** The backend started successfully but crashed with a `Permission Denied` error the moment a user tried to upload a file. Hugging Face runs Docker containers as a strict non-root user (`uid 1000`), so Python could not write the ChromaDB folder to disk.
+
+**Solution:** Rewrote the `Dockerfile` to explicitly create and switch to a non-root user, and used `--chown=user:user` on all `COPY` commands so the application files are owned by that user from the start:
+```dockerfile
+RUN useradd -m -u 1000 user
+USER user
+```
+
+---
+
+### 6. CORS Error — Wildcard `*` Blocked With Credentials
+**Problem:** Even after setting `ALLOWED_ORIGINS=*` in Hugging Face secrets, the browser blocked all API requests with a CORS error. Modern browsers (Chrome, Safari) enforce a strict rule: if a request includes credentials (like an API Key header), the server **cannot** respond with a wildcard `*` origin — it must specify the exact allowed origin.
+
+**Solution:** Replaced the `*` wildcard in the Hugging Face `ALLOWED_ORIGINS` secret with the exact Vercel frontend URL:
+```
+ALLOWED_ORIGINS=https://auto-agentic-rag.vercel.app
+```
+
+---
+
+### 7. Vercel Environment Variables Not Baked Into Build
+**Problem:** Even after adding `VITE_API_URL` and `VITE_API_KEY` in the Vercel dashboard and redeploying, the live JavaScript bundle still contained `127.0.0.1` (the local development fallback). Vite bakes environment variables at **build time**, not runtime. If the variables are added or changed after a build starts, they are ignored.
+
+**Solution:** Hardcoded the Hugging Face backend URL directly as the fallback value in `App.jsx` so the app always works regardless of whether the Vercel environment variable is set:
+```js
+const API_BASE = import.meta.env.VITE_API_URL || 'https://sunny9523-agentic-rag.hf.space';
+const API_KEY  = import.meta.env.VITE_API_KEY  || 'I_am_sunny_007';
+```
+After pushing this change, Vercel automatically detected the new commit and redeployed with the correct backend URL baked in.
+
+---
+
 ### 🐙 How to Push a Copied Project to a New GitHub Repository
 
 If you cloned or copied this folder and want to upload it as a brand new repository on your own GitHub account:
