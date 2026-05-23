@@ -1,10 +1,5 @@
 ---
 title: Agentic Rag
-emoji: 👀
-colorFrom: green
-colorTo: purple
-sdk: docker
-pinned: false
 ---
 
 # 🤖 AutoDoc RAG System
