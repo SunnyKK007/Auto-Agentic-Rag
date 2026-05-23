@@ -5,7 +5,7 @@ title: Agentic Rag
 # 🤖 AutoDoc RAG System
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://auto-agentic-rag.vercel.app/)
-[![Backend](https://img.shields.io/badge/Backend-Hugging%20Face-yellow?style=for-the-badge&logo=huggingface)](https://sunny9523-semantic-book-recomender.hf.space)
+[![Backend](https://img.shields.io/badge/Backend-Hugging%20Face-yellow?style=for-the-badge&logo=huggingface)](https://sunny9523-Agentic-Rag.hf.space)
 [![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blue?style=for-the-badge&logo=react)](https://auto-agentic-rag.vercel.app/)
 
 > 🚀 **[Try it Live → https://auto-agentic-rag.vercel.app](https://auto-agentic-rag.vercel.app/)**
