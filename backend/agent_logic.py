@@ -4,7 +4,7 @@ from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.chat_models import ChatOllama
+from langchain_ollama import ChatOllama
 from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain_community.tools.google_serper.tool import GoogleSerperRun
 from database import vector_store
