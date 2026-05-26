@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     """
     gemini_api_key: str = ""
     api_key: str = ""
+    serper_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
     chunk_size: int = 800
     chunk_overlap: int = 80  # 10% of 800

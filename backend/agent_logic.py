@@ -5,7 +5,8 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.chat_models import ChatOllama
-from langchain_community.tools.ddg_search.tool import DuckDuckGoSearchRun
+from langchain_community.utilities import GoogleSerperAPIWrapper
+from langchain_community.tools.google_serper.tool import GoogleSerperRun
 from database import vector_store
 from config import settings
 
@@ -34,7 +35,7 @@ def retrieve(state: GraphState) -> GraphState:
     """Retrieve documents and keep their relevance scores."""
     question = state["question"]
     session_id = state.get("session_id", "default")
-    results = vector_store.similarity_search_with_scores(question, k=4, session_id=session_id)
+    results = vector_store.similarity_search_with_scores(question, k=10, session_id=session_id)
     doc_contents = [doc.page_content for doc, _ in results]
     scores = [score for _, score in results]
     if scores:
@@ -61,11 +62,27 @@ def web_search(state: GraphState) -> GraphState:
     print(f"[Agent] Routing to Web Search for: {question}")
 
     try:
-        search_tool = DuckDuckGoSearchRun()
-        results = search_tool.invoke(question)
+        search_wrapper = GoogleSerperAPIWrapper(serper_api_key=settings.serper_api_key)
+        
+        # Get the full JSON results instead of just the first snippet
+        raw_results = search_wrapper.results(question)
+        
+        snippets = []
+        if "answerBox" in raw_results and "snippet" in raw_results["answerBox"]:
+            snippets.append("Answer Box: " + raw_results["answerBox"]["snippet"])
+        if "knowledgeGraph" in raw_results and "description" in raw_results["knowledgeGraph"]:
+            snippets.append("Knowledge Graph: " + raw_results["knowledgeGraph"]["description"])
+            
+        # Grab snippets from the top 5 organic search results
+        for res in raw_results.get("organic", [])[:5]:
+            if "snippet" in res:
+                snippets.append(res["snippet"])
+                
+        results_text = "\n\n".join(snippets) if snippets else "No information found."
+        
         print(f"[Agent] Web Search Results retrieved.")
         return {
-            "documents": [f"Web Search Result:\n{results}"],
+            "documents": [f"Web Search Result:\n{results_text}"],
             "needs_web_search": False,
             "used_web_search": True,
         }
@@ -79,7 +96,7 @@ def generate_answer(state: GraphState) -> GraphState:
     documents = state.get("documents", [])
     docs_text = "\n\n".join(documents)
     
-    sys_msg = SystemMessage(content="You are an expert AI assistant. Answer the user's question using ONLY the provided context (which may include local docs or web search results). If the context does not contain the answer, you MUST state exactly: 'I cannot find this information in the provided documentation.'")
+    sys_msg = SystemMessage(content="You are an expert AI assistant. Answer the user's question using ONLY the provided context (which may include local docs or web search results). Pay close attention to any instructions the user gives regarding length or detail. If they ask for a short summary or a little bit, be brief. If they ask for a detailed explanation, be thorough structured response. If they don't specify, default to a balanced, moderate length. If the context does not contain the answer, you MUST state exactly: 'I cannot find this information in the provided documentation.'")
     human_msg = HumanMessage(content=f"Context:\n{docs_text}\n\nQuestion: {question}")
     
     try:

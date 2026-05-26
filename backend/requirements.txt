@@ -14,8 +14,6 @@ pdfplumber
 pandas
 pypdf
 langchain-chroma
-duckduckgo-search
-ddgs
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib

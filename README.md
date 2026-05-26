@@ -9,9 +9,7 @@
 
 > 🚀 **[Try it Live → https://auto-agentic-rag.vercel.app](https://auto-agentic-rag.vercel.app/)**
 
----
-
-A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) system** built with a **FastAPI** backend and a **React + Vite** frontend. The system uses a stateful **LangGraph** agent to retrieve relevant document chunks from ChromaDB, gate results by similarity score, answer with Gemini when document context is strong enough, and fall back to live DuckDuckGo web search when the uploaded documents do not contain the answer. It supports ingestion from local file uploads as well as directly from **Google Drive**.
+A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) system** built with a **FastAPI** backend and a **React + Vite** frontend. The system uses a stateful **LangGraph** agent to retrieve relevant document chunks from ChromaDB, gate results by similarity score, answer with Gemini when document context is strong enough, and fall back to live Google Search via Serper when the uploaded documents do not contain the answer. It supports ingestion from local file uploads as well as directly from **Google Drive**.
 
 ---
 
@@ -22,7 +20,8 @@ A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) syste
 | **Multi-file Local Ingestion** | Supports selecting multiple PDF, TXT, and CSV files in one upload. Chunks, embeds, and stores in ChromaDB automatically. |
 | **Ingestion Status Tracking** | Local uploads and Drive ingestion run in the background and the UI polls job status until ingestion completes. |
 | **Google Drive Ingestion** | Paste one or more Google Drive folder URLs, Google Doc/Sheet/Slides links, PDF links, or bare IDs. Public links and files shared with the authenticated account can be ingested. |
-| **Agentic Web Search** | If documents don't contain the answer, the agent searches the live web via DuckDuckGo (free, no API key). |
+| **Agentic Web Search** | If documents don't contain the answer, the agent searches the live web via Serper.dev (Google Search API), extracting multiple organic snippets to build deep context. |
+| **Dynamic Detail Scaling** | The agent's system prompt intelligently scales the length and detail of its answers based on instructions in your prompt (e.g., "tell me in detail" vs "briefly summarize"). |
 | **Score-based Relevance Gate** | Uses Chroma relevance scores instead of an extra LLM relevance-grading call, reducing Gemini quota usage. |
 | **Session Isolation** | Each browser session gets a separate ChromaDB collection. "Clear previous session" wipes only that session's collection. |
 | **Optional API-Key Auth** | Set `API_KEY` on the backend and `VITE_API_KEY` on the frontend to protect API endpoints before deployment. |
@@ -58,7 +57,7 @@ evaluate_relevance
                                     Return
 ```
 
-**Fallback behavior**: If document relevance is too weak, the agent routes to DuckDuckGo. If Gemini quota is exhausted after web search succeeds, the app returns the raw web-search snippet instead of a generic internal error.
+**Fallback behavior**: If document relevance is too weak, the agent routes to web search via Serper, extracting up to 5 organic search snippets, the Answer Box, and Knowledge Graph to provide rich context. If Gemini quota is exhausted after web search succeeds, the app returns the raw web-search snippets instead of a generic internal error.
 
 ---
 
@@ -102,10 +101,7 @@ AutoDoc RAG/
 | `langgraph` | Stateful agent state machine |
 | `langchain-google-genai` | Gemini LLM + Gemini Embedding API |
 | `langchain-chroma` | ChromaDB integration |
-| `langchain-community` | Document loaders, DuckDuckGo search tool |
-| `chromadb` | Local persistent vector database |
-| `duckduckgo-search` | Free web search (no API key) |
-| `ddgs` | Runtime package used by DuckDuckGo search |
+| `langchain-community` | Document loaders, Google Serper search tool |
 | `pypdf` | PDF text extraction |
 | `pdfplumber` | Enhanced PDF extraction |
 | `pandas` | CSV handling |
@@ -128,7 +124,7 @@ AutoDoc RAG/
 |---|---|
 | **Google Gemini** | `gemini-2.5-flash` — LLM for final answer generation |
 | **Google Gemini Embeddings** | `models/gemini-embedding-2` — Text → vector conversion |
-| **DuckDuckGo** | Free live web search fallback |
+| **Serper.dev (Google Search)** | High-quality live web search fallback via API |
 | **Google Drive API v3** | OAuth-authenticated folder/file reading |
 
 ---
@@ -181,6 +177,7 @@ pip install -r requirements.txt
 Create a `.env` file in `backend/`:
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
+SERPER_API_KEY=your_serper_api_key_here
 API_KEY=change_this_before_deploying
 MIN_RELEVANCE_SCORE=0.50
 ALLOWED_ORIGINS=http://localhost:5173
@@ -343,5 +340,5 @@ ALLOWED_ORIGINS=https://your-app.vercel.app
 | ChromaDB is still local/self-hosted | Migrate to Pinecone, Weaviate, Qdrant Cloud, or Chroma Cloud for managed vector storage. |
 | API-key auth is not full user login | Add Clerk, Auth0, Firebase Auth, or Supabase Auth for real user accounts. |
 | Session isolation is browser-based | Map authenticated user IDs to collections after adding full login. |
-| DuckDuckGo can be unreliable | Swap to Tavily or SerpAPI for more reliable structured search results. |
+| Requires API Key for web search | Serper.dev provides 2,500 free queries, but it is not completely free forever like DuckDuckGo. |
 | No OCR for images/videos | Add OCR and media extraction for scanned PDFs, images, or video transcripts. |
