@@ -1,20 +1,3 @@
----
-title: Agentic Rag
-emoji: 🤖
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
----
-
----
-title: Agentic Rag
-emoji: 🤖
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
----
 
 # 🤖 AutoDoc RAG System
 ---
