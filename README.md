@@ -372,4 +372,4 @@ ALLOWED_ORIGINS=https://your-app.vercel.app
 
 **Sunny Kant Kumar**
 
-Built with curiosity, caffeine, and a love for books. 📖✨
+Built with curiosity.🤖✨
