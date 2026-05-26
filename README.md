@@ -34,30 +34,53 @@ A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) syste
 
 ## 🧠 Agentic Reasoning Flow (LangGraph State Machine)
 
-Every query goes through a lightweight state machine designed to reduce Gemini calls. Normal document questions now use only one Gemini call for answer generation.
+Every query goes through a stateful LangGraph graph. The agent uses **score-based gating** to avoid unnecessary LLM calls, and **hallucination checking** to ensure answers are grounded in real context.
 
-```
-User Query
-  |
-  v
-plan_search
-  |  Uses the original user question directly
-  v
-retrieve
-  |  ChromaDB semantic similarity search with scores (top-4 chunks)
-  v
-evaluate_relevance
-  |  Checks best Chroma score against MIN_RELEVANCE_SCORE
-  |
-  +-- score >= threshold --> generate_answer
-  |
-  +-- score < threshold  --> web_search --> generate_answer
-                                      |
-                                      v
-                                    Return
+```mermaid
+flowchart TD
+    A([🧑 User Query]) --> B
+
+    B["🔍 plan_search\nUse original question as retrieval query"]
+    B --> C
+
+    C["📚 retrieve\nChromaDB semantic similarity search\nFetch top-10 chunks with relevance scores"]
+    C --> D
+
+    D{"⚖️ evaluate_relevance\nBest score ≥ MIN_RELEVANCE_SCORE?"}
+
+    D -- "✅ Yes — Docs are relevant" --> F
+    D -- "❌ No — Docs are irrelevant" --> E
+
+    E["🌐 web_search\nCall Serper.dev Google Search API\nExtract Answer Box + Knowledge Graph\n+ Top 5 organic snippets"]
+    E --> F
+
+    F["🤖 generate_answer\nGemini 2.5 Flash LLM\nAnswer using injected context\nRespects user detail level instructions"]
+    F --> G
+
+    G{"🛡️ check_hallucination\nDoes answer contain grounded content?\nOr did LLM say it cannot find info?"}
+
+    G -- "✅ Grounded answer" --> H([✅ Return Answer to User])
+    G -- "❌ Hallucination detected\nor no context found" --> I([⚠️ Return: 'I cannot find this\ninformation in the provided documentation.'])
+
+    style A fill:#6366f1,color:#fff,stroke:#4f46e5
+    style B fill:#0ea5e9,color:#fff,stroke:#0284c7
+    style C fill:#0ea5e9,color:#fff,stroke:#0284c7
+    style D fill:#f59e0b,color:#fff,stroke:#d97706
+    style E fill:#ef4444,color:#fff,stroke:#dc2626
+    style F fill:#8b5cf6,color:#fff,stroke:#7c3aed
+    style G fill:#f59e0b,color:#fff,stroke:#d97706
+    style H fill:#10b981,color:#fff,stroke:#059669
+    style I fill:#ef4444,color:#fff,stroke:#dc2626
 ```
 
-**Fallback behavior**: If document relevance is too weak, the agent routes to web search via Serper, extracting up to 5 organic search snippets, the Answer Box, and Knowledge Graph to provide rich context. If Gemini quota is exhausted after web search succeeds, the app returns the raw web-search snippets instead of a generic internal error.
+**Key Design Decisions in this Flow:**
+- **`plan_search`** → Passes the user's raw question directly to ChromaDB (no query rewriting needed at this stage)
+- **`retrieve`** → Fetches **top-10 chunks** (k=10) with relevance scores so the LLM has rich context for detailed answers
+- **`evaluate_relevance`** → Uses ChromaDB's mathematical similarity score as a **free relevance gate** — avoids a costly extra LLM grading call
+- **`web_search`** → Hits Serper.dev Google API and extracts **Answer Box + Knowledge Graph + 5 organic snippets** for deep context
+- **`generate_answer`** → Single Gemini LLM call; dynamically scales detail level based on user's prompt instructions
+- **`check_hallucination`** → Guards the final output; if the LLM could not find relevant content it returns the standard "cannot find" message instead of a hallucinated answer
+
 
 ---
 
