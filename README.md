@@ -44,7 +44,7 @@ A modular, production-ready **AutoDoc Retrieval-Augmented Generation (RAG) syste
 | **Optional API-Key Auth** | Set `API_KEY` on the backend and `VITE_API_KEY` on the frontend to protect API endpoints before deployment. |
 | **Batch Embedding** | Chunks are embedded 10 at a time (not one-by-one), making ingestion ~10x faster. |
 | **Backend Contract Tests** | Includes `unittest` coverage for API-key auth, Drive link splitting, and Drive ingestion job status. |
-| **Premium UI** | Glassmorphic, dark-themed React frontend with smooth animations and an "Agent is thinking..." indicator. |
+| **Advanced Premium UI** | Fully redesigned glassmorphic, dark-themed React frontend built with Tailwind CSS v4. Features dynamic particle mesh gradients, smooth hover micro-animations, and an intuitive side-panel layout. |
 | **Robust Error Handling** | Auto-heals corrupted ChromaDB, sanitizes metadata, handles empty files, and provides clear error messages. |
 
 ---
@@ -220,7 +220,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 SERPER_API_KEY=your_serper_api_key_here
 API_KEY=change_this_before_deploying
 MIN_RELEVANCE_SCORE=0.50
-ALLOWED_ORIGINS=http://localhost:5173
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174
 CHROMA_DB_DIR=./chroma_db
 ```
 
@@ -296,7 +296,7 @@ Unsupported or inaccessible files are skipped or reported as errors. Images and 
 | `API_KEY` | `""` | Optional API key. When set, protected endpoints require `X-API-Key`. |
 | `CHROMA_DB_DIR` | `./chroma_db` | Local ChromaDB storage path |
 | `MIN_RELEVANCE_SCORE` | `0.50` | Minimum Chroma relevance score needed to answer from uploaded documents. Lower trusts docs more; higher routes to web search more often. |
-| `ALLOWED_ORIGINS` | `*` | Allowed CORS origins |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Allowed CORS origins. Automatically accepts localhost and 127.0.0.1 across common dev ports. |
 
 ### Frontend (`frontend/.env.local`)
 
