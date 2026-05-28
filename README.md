@@ -1,20 +1,3 @@
----
-title: Agentic Rag
-emoji: 🤖
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
----
-
----
-title: Agentic Rag
-emoji: 🤖
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
----
 
 # 🤖 AutoDoc RAG System
 ---
@@ -382,3 +365,11 @@ ALLOWED_ORIGINS=https://your-app.vercel.app
 | Session isolation is browser-based | Map authenticated user IDs to collections after adding full login. |
 | Requires API Key for web search | Serper.dev provides 2,500 free queries, but it is not completely free forever like DuckDuckGo. |
 | No OCR for images/videos | Add OCR and media extraction for scanned PDFs, images, or video transcripts. |
+
+---
+
+## 👤 Author
+
+**Sunny Kant Kumar**
+
+Built with curiosity.🤖✨
