@@ -45,18 +45,42 @@ def retrieve(state: GraphState) -> GraphState:
     return {"documents": doc_contents, "relevance_scores": scores}
 
 def evaluate_relevance(state: GraphState) -> GraphState:
-    """Use Chroma relevance scores instead of an LLM relevance grader."""
+    """LLM-based semantic relevance grader with threshold fallback."""
+    question = state["question"]
+    documents = state.get("documents", [])
     scores = state.get("relevance_scores", [])
     best_score = max(scores) if scores else 0.0
 
-    if best_score < settings.min_relevance_score:
-        print(
-            "[Agent] Document relevance below threshold "
-            f"({best_score:.3f} < {settings.min_relevance_score:.3f}); using web search."
-        )
+    if not documents:
         return {"needs_web_search": True}
 
-    return {"needs_web_search": False}
+    # Truncate documents to save tokens and time for the quick grading step
+    docs_text = "\n\n".join([doc[:500] for doc in documents])
+    
+    sys_msg = SystemMessage(content=(
+        "You are a relevance grader assessing whether the retrieved context is relevant to the user's question. "
+        "If the user is asking a meta-question like 'summarize this document' or 'what is this about', ALWAYS output 'yes'. "
+        "If the context contains information that helps answer the question, output 'yes'. "
+        "If the context is completely irrelevant to the question, output 'no'. "
+        "Output ONLY the word 'yes' or 'no', nothing else."
+    ))
+    human_msg = HumanMessage(content=f"Context:\n{docs_text}\n\nQuestion: {question}")
+    
+    try:
+        res = llm.invoke([sys_msg, human_msg])
+        decision = res.content.strip().lower()
+        print(f"[Agent] Semantic Relevance Grader decision: {decision}")
+        
+        if "yes" in decision:
+            return {"needs_web_search": False}
+        else:
+            return {"needs_web_search": True}
+    except Exception as e:
+        print(f"[Agent] Relevance grader failed ({e}), falling back to math threshold.")
+        if best_score < settings.min_relevance_score:
+            print(f"[Agent] Document relevance below threshold ({best_score:.3f} < {settings.min_relevance_score:.3f}); using web search.")
+            return {"needs_web_search": True}
+        return {"needs_web_search": False}
 
 def web_search(state: GraphState) -> GraphState:
     """Fallback to web search if local DB doesn't have the answer."""
