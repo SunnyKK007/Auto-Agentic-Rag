@@ -8,7 +8,7 @@ import threading
 from typing import List, Tuple
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 from config import settings
 
@@ -29,8 +29,11 @@ class VectorStore:
         self._collections: dict[str, Chroma] = {}
         self._lock = threading.RLock()
         
-        if settings.use_local_llm:
-            self.embeddings = OllamaEmbeddings(base_url=settings.ollama_base_url, model="nomic-embed-text")
+        if settings.openai_api_key:
+            self.embeddings = OpenAIEmbeddings(
+                model="text-embedding-3-small",
+                api_key=settings.openai_api_key
+            )
         else:
             # Requires gemini_api_key set in environment or config
             self.embeddings = GoogleGenerativeAIEmbeddings(

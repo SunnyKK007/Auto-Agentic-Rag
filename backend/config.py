@@ -9,16 +9,15 @@ class Settings(BaseSettings):
     
     Attributes:
         gemini_api_key: The API key for Google Gemini.
-        ollama_base_url: The base URL for the local Ollama instance (if used).
+        openai_api_key: The API key for OpenAI.
         chunk_size: The default chunk size for document text splitting.
         chunk_overlap: The default chunk overlap for document text splitting.
         chroma_db_dir: The directory path for storing the ChromaDB vectors.
-        use_local_llm: Flag indicating whether to use local Ollama model instead of Gemini.
     """
     gemini_api_key: str = ""
     api_key: str = ""
     serper_api_key: str = ""
-    ollama_base_url: str = "http://localhost:11434"
+    openai_api_key: str = ""
     chunk_size: int = 800
     chunk_overlap: int = 80  # 10% of 800
     min_relevance_score: float = 0.40
@@ -26,7 +25,6 @@ class Settings(BaseSettings):
     # pointing to the persistent volume at /data/chroma_db.
     # Locally it falls back to ./chroma_db for development.
     chroma_db_dir: str = "./chroma_db"
-    use_local_llm: bool = False
     # Comma-separated list of allowed CORS origins.
     # Set to your Vercel URL in production, e.g. "https://your-app.vercel.app"
     allowed_origins: str = "*"

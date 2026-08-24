@@ -3,7 +3,7 @@ uvicorn
 python-multipart
 langchain
 langchain-community
-langchain-ollama
+langchain-openai
 langgraph
 chromadb
 rank_bm25

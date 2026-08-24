@@ -4,7 +4,7 @@ from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain_community.tools.google_serper.tool import GoogleSerperRun
 from database import vector_store
@@ -22,10 +22,12 @@ class GraphState(TypedDict):
     used_web_search: bool
 
 # Initialize LLM
-if settings.use_local_llm:
-    llm = ChatOllama(base_url=settings.ollama_base_url, model="llama3", temperature=0)
+gemini_llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, google_api_key=settings.gemini_api_key)
+
+if settings.openai_api_key:
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=settings.openai_api_key).with_fallbacks([gemini_llm])
 else:
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, google_api_key=settings.gemini_api_key)
+    llm = gemini_llm
 
 def plan_search(state: GraphState) -> GraphState:
     """Use the original user question as the retrieval query."""
