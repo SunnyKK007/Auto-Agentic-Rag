@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Reads from .env.local in development, or from Vercel env vars in production.
 // Fallback to Hugging Face Space URL if env var is not set.
@@ -571,7 +573,11 @@ function App() {
                     max-w-[85%] md:max-w-[75%] p-4 text-sm md:text-base leading-relaxed relative group
                     ${isUser ? 'chat-bubble-user text-white' : 'chat-bubble-assistant text-slate-200'}
                   `}>
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                    <div className="markdown-body">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
                     
                     {/* Timestamp / Action hover */}
                     <div className={`
