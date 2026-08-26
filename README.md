@@ -1,26 +1,47 @@
+---
+title: Auto-Agentic RAG
+emoji: ⚡
+colorFrom: gray
+colorTo: gray
+sdk: docker
+pinned: false
+---
+
 # Auto-Agentic RAG System
 
-A modular, production-ready AutoDoc Retrieval-Augmented Generation (RAG) system built with a FastAPI backend and a React + Vite frontend.
+<p align="left">
+  <a href="https://auto-agentic-rag.vercel.app/">
+    <img src="https://img.shields.io/badge/LIVE_DEMO-VERCEL-black?style=for-the-badge&logo=vercel" alt="Vercel Live Demo" />
+  </a>
+  <a href="https://huggingface.co/spaces/Sunny9523/Agentic-Rag">
+    <img src="https://img.shields.io/badge/BACKEND-HUGGING_FACE-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face Backend" />
+  </a>
+  <img src="https://img.shields.io/badge/FRONTEND-REACT_%2B_VITE-0088cc?style=for-the-badge&logo=react&logoColor=white" alt="React Vite Frontend" />
+</p>
 
-The system leverages a stateful LangGraph agent to perform "Cover-to-Cover" reading of your documents using ChromaDB. It evaluates semantic relevance in real-time, answers with Gemini when document context is explicitly clear, and intelligently falls back to live Google Search via Serper.dev when your uploaded documents lack the required information.
+🚀 [Try it Live → https://auto-agentic-rag.vercel.app](https://semantic-book-recommender-five.vercel.app/)
 
-## Key Features
+A modular, production-ready AutoDoc Retrieval-Augmented Generation (RAG) system built with a robust **FastAPI backend** and a visually stunning **React 19 + Vite 8 frontend**.
 
-*   **Cover-to-Cover Processing**: Retrieves massive context windows (up to 500 chunks) to ensure the AI reads multiple uploaded documents in their entirety before answering.
-*   **Multi-file Local Ingestion**: Supports selecting multiple PDF, TXT, and CSV files in one upload. Chunks, embeds, and stores in ChromaDB automatically.
-*   **Ingestion Status Tracking**: Local uploads and Drive ingestion run in the background and the UI polls job status until ingestion completes.
-*   **Google Drive Ingestion**: Paste one or more Google Drive folder URLs, Google Doc/Sheet/Slides links, PDF links, or bare IDs. Public links and files shared with the authenticated account can be ingested.
-*   **Agentic Web Search**: If documents don't contain the answer, the agent searches the live web via Serper.dev (Google Search API), extracting multiple organic snippets to build deep context.
+The system leverages a stateful **LangGraph** agent to dynamically retrieve up to 25 context chunks from your documents using **ChromaDB**. It evaluates semantic relevance in real-time, answers with **Gemini 2.5 Flash** (or OpenAI's `gpt-4o-mini` with Gemini fallbacks) when document context is explicitly clear, and intelligently falls back to live Google Search via **Serper.dev** when your uploaded documents lack the required information.
+
+---
+
+## ✦ Key Features
+
+*   **Deep Context Retrieval**: Retrieves extended context windows (up to 25 chunks) to ensure the AI has strong knowledge from multiple uploaded documents before answering.
+*   **Agentic Web Search Fallback**: If local documents lack the answer (determined by a strict LLM relevance grader or mathematical threshold), the agent searches the live web via the **Serper.dev** API, extracting the Answer Box, Knowledge Graph, and top 5 organic snippets to build deep context.
+*   **Multi-file Local Ingestion**: Supports selecting multiple PDF, TXT, and CSV files in one upload. The backend uses `pypdf` and `pdfplumber` for robust PDF parsing and `pandas` for CSVs.
+*   **Google Drive Ingestion**: Paste one or more Google Drive folder URLs, Google Doc/Sheet/Slides links, PDF links, or bare IDs. Supports OAuth 2.0 flow for reading private files shared with the authenticated account.
+*   **Background Processing**: Ingestion (both local and Drive) runs in FastAPI `BackgroundTasks`, meaning HTTP responses return instantly, preventing timeouts during massive document uploads. The UI continuously polls job status.
 *   **Dynamic Detail Scaling**: The agent's system prompt intelligently scales the length and detail of its answers based on instructions in your prompt (e.g., "tell me in detail" vs "briefly summarize").
-*   **Score-based Relevance Gate**: Uses Chroma relevance scores instead of an extra LLM relevance-grading call, reducing Gemini quota usage.
-*   **Session Isolation**: Each browser session gets a separate ChromaDB collection. "Clear previous session" wipes only that session's collection.
-*   **Optional API-Key Auth**: Set `API_KEY` on the backend and `VITE_API_KEY` on the frontend to protect API endpoints before deployment.
-*   **Batch Embedding**: Chunks are embedded 10 at a time (not one-by-one), making ingestion ~10x faster.
-*   **Backend Contract Tests**: Includes `unittest` coverage for API-key auth, Drive link splitting, and Drive ingestion job status.
-*   **Advanced Premium UI**: Fully redesigned glassmorphic, dark-themed React frontend built with Tailwind CSS v4. Features dynamic particle mesh gradients, smooth hover micro-animations, and an intuitive side-panel layout.
-*   **Robust Error Handling**: Auto-heals corrupted ChromaDB, sanitizes metadata, handles empty files, and provides clear error messages.
+*   **Session Isolation**: Each browser session gets a separate ChromaDB collection. "Clear previous session" wipes only that session's vector collection, ensuring true multi-user isolation.
+*   **Advanced Premium UI**: Fully redesigned glassmorphic, dark-themed React frontend built with **Tailwind CSS v4**. Features dynamic particle mesh gradients, smooth hover micro-animations, Markdown rendering (`react-markdown` + `remark-gfm`), and an intuitive side-panel layout.
+*   **Robust Error & Quota Handling**: Auto-heals corrupted ChromaDB, sanitizes metadata, handles empty files, and elegantly alerts the user if the Gemini API free-tier quota is exhausted.
 
-## Agentic Reasoning Flow (LangGraph State Machine)
+---
+
+## ⬡ Agentic Reasoning Flow (LangGraph State Machine)
 
 Every query passes through a stateful LangGraph machine. The agent dynamically routes the query based on mathematical relevance scores and strict LLM evaluations.
 
@@ -31,18 +52,18 @@ flowchart TD
     B["plan_search\nUse raw question as query"]
     B --> C
 
-    C["retrieve\nFetch up to 500 chunks (Cover-to-Cover)"]
+    C["retrieve\nFetch up to 25 chunks from ChromaDB"]
     C --> D
 
     D{"evaluate_relevance\nStrict Prompt Evaluation"}
 
-    D -- "Answer in Context" --> F
-    D -- "Answer Not in Context" --> E
+    D -- "Answer in Context\n(or Meta-Question)" --> F
+    D -- "Answer Not in Context\n(or Score < Threshold)" --> E
 
-    E["web_search\nSerper.dev Google Search API\n(Answer Box + 5 organic snippets)"]
+    E["web_search\nSerper.dev API\n(Answer Box + Knowledge Graph + 5 organic)"]
     E --> F
 
-    F["generate_answer\nGemini 2.5 Flash LLM\nSynthesize final response"]
+    F["generate_answer\nGemini 2.5 Flash / GPT-4o-mini\nSynthesize final response"]
     F --> G
 
     G{"check_hallucination\nIs answer grounded?"}
@@ -51,17 +72,27 @@ flowchart TD
     G -- "Unsafe" --> I([Reject Answer])
 ```
 
-## Project Structure
+### Graph State Breakdown
+The `GraphState` passes vital information across nodes:
+- `question`: Original user question.
+- `session_id`: Unique session string for isolated document context.
+- `documents`: List of context strings (from DB or Web).
+- `relevance_scores`: Tracking mathematical confidence.
+- `needs_web_search` / `used_web_search`: Flags indicating routing and tracking for the final output.
+
+---
+
+## ⊞ Project Structure
 
 ```text
 AutoDoc RAG/
 ├── backend/
-│   ├── app.py              # FastAPI server (API endpoints)
-│   ├── agent_logic.py      # LangGraph state machine (Routing & LLM)
-│   ├── ingest.py           # File chunking & embedding pipeline
-│   ├── database.py         # ChromaDB operations wrapper
-│   ├── drive_loader.py     # Google Drive OAuth 2.0 integration
-│   ├── config.py           # Pydantic settings loading
+│   ├── app.py              # FastAPI server, CORS, BackgroundTasks, API endpoints
+│   ├── agent_logic.py      # LangGraph state machine, LLM routing, Serper integration
+│   ├── ingest.py           # File chunking & batch embedding pipeline (local & Drive)
+│   ├── database.py         # ChromaDB operations wrapper, session isolation
+│   ├── drive_loader.py     # Google Drive OAuth 2.0 integration & fetching
+│   ├── config.py           # Pydantic settings loading (.env parsing)
 │   ├── tests/              # Backend API contract tests
 │   ├── requirements.txt    # Python dependencies
 │   ├── .env                # Backend environment variables
@@ -74,58 +105,83 @@ AutoDoc RAG/
     ├── .env.local          # Frontend environment variables
     ├── index.html
     ├── vite.config.js
-    └── package.json        # Node dependencies
+    └── package.json        # Node dependencies (React 19, Tailwind 4)
 ```
 
-## Full Tech Stack
+---
+
+## ⚡ Full Tech Stack
 
 ### Backend
-*   `fastapi`, `uvicorn`: REST API framework and ASGI server
-*   `pydantic`, `pydantic-settings`: Data validation and `.env` config loading
-*   `langchain`, `langgraph`: Core orchestration and state machine
-*   `langchain-google-genai`: Gemini 2.5 Flash LLM + Embeddings
-*   `langchain-chroma`, `chromadb`: Vector Storage integration
-*   `pypdf`, `pdfplumber`, `pandas`: Document parsing (PDFs, CSVs)
-*   `google-api-python-client`: Google Drive API v3
-*   `google-auth-oauthlib`: OAuth 2.0 flow authentication
+*   **Framework**: `fastapi`, `uvicorn` (REST API & ASGI server)
+*   **Validation & Config**: `pydantic`, `pydantic-settings`
+*   **Agent & LLM**: `langchain`, `langgraph`, `langchain-google-genai` (Gemini 2.5 Flash), `langchain-openai` (Optional GPT-4o-mini fallback)
+*   **Vector Storage**: `langchain-chroma`, `chromadb`
+*   **Document Parsing**: `pypdf`, `pdfplumber` (PDFs), `pandas` (CSVs)
+*   **External APIs**: `google-api-python-client`, `google-auth-oauthlib` (Google Drive), `langchain_community.utilities` (Google Serper)
 
 ### Frontend
-*   `react`, `react-dom`: UI component library (React 19)
-*   `vite`: Dev server and bundler (Vite 8)
-*   `tailwindcss`: Utility-first CSS framework (v4)
-*   `react-markdown`, `remark-gfm`: Markdown rendering for AI responses
+*   **Framework**: React 19 (`react`, `react-dom`)
+*   **Build Tool**: Vite 8 (`vite`)
+*   **Styling**: Tailwind CSS v4 (`tailwindcss`, `@tailwindcss/vite`)
+*   **Rendering**: `react-markdown`, `remark-gfm` (Markdown tables, lists, formatting)
 
-## API Endpoints
+---
+
+## ⇄ API Endpoints
 
 ### `POST /api/ingest`
 Uploads and ingests one or more local files into the vector store.
 *   **Body:** `multipart/form-data` — `files`, `clear_previous` (bool), `session_id` (string)
-*   **Response:** `{ "job_id": "...", "files": ["file1.pdf"], "message": "Ingesting 1 file: file1.pdf" }`
+*   **Response:** Returns a `job_id` immediately while parsing happens in the background.
 
 ### `GET /api/ingest/status/{job_id}`
 Checks the status of a background local-file or Drive ingestion job.
-*   **Response:** `{ "status": "processing|completed|failed", "kind": "local|drive", "session_id": "...", "files": [...], "completed": [...], "failed": [...] }`
+*   **Response:** `{ "status": "processing|completed|failed", "kind": "local|drive", "files": [...], "completed": [...], "failed": [...] }`
 
 ### `POST /api/ingest/drive`
 Ingests documents from one or more Google Drive folder/file URLs or IDs.
-*   **Body:** `{ "folder_id": "...", "drive_links": ["<url-or-id-1>"], "clear_previous": true, "session_id": "..." }`
-*   **Response:** `{ "job_id": "...", "files": [...], "message": "Ingesting Google Drive links." }`
+*   **Body:** `{ "folder_id": "...", "drive_links": ["<url>"], "clear_previous": true, "session_id": "..." }`
+*   **Response:** Returns a `job_id`.
 
 ### `POST /api/query`
 Sends a question to the LangGraph agent and returns an answer.
 *   **Body:** `{ "question": "What is the refund policy?", "session_id": "..." }`
-*   **Response:** `{ "answer": "According to the document..." }`
+*   **Response:** `{ "answer": "..." }`
 
 ### `GET /api/health`
-Simple health-check endpoint for monitoring.
-*   **Response:** `{ "status": "ok" }`
+Health-check endpoint.
 
-## How to Run Locally
+---
+
+## ⚙ Environment Variables
+
+### Backend (`backend/.env`)
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `GEMINI_API_KEY` | Your Google Gemini API Key (Required). | - |
+| `OPENAI_API_KEY` | Optional OpenAI API Key (Uses `gpt-4o-mini` if provided, falls back to Gemini). | - |
+| `SERPER_API_KEY` | Your Serper.dev API Key for Agentic Web Search. | - |
+| `API_KEY` | Security key for all endpoints. Leave blank for local dev. | - |
+| `MIN_RELEVANCE_SCORE`| Minimum Chroma DB similarity score before forcing web search. | `0.15` |
+| `ALLOWED_ORIGINS` | CORS allowed origins (comma separated). | `*` |
+| `CHROMA_DB_DIR` | Local directory to store vector databases. | `./chroma_db` |
+
+### Frontend (`frontend/.env.local`)
+| Variable | Description |
+| :--- | :--- |
+| `VITE_API_URL` | Base URL of your backend (e.g., `http://localhost:8000`). |
+| `VITE_API_KEY` | Must match the `API_KEY` from the backend to authorize requests. |
+
+---
+
+## ▶ How to Run Locally
 
 ### Prerequisites
 *   Python 3.10+
 *   Node.js 18+
-*   Google Gemini API Key (get one free at aistudio.google.com)
+*   Google Gemini API Key (Get one free at [aistudio.google.com](https://aistudio.google.com/))
+*   Serper API Key (Get one free at [serper.dev](https://serper.dev/))
 
 ### 1. Backend Setup
 
@@ -136,16 +192,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Create a `.env` file in `backend/`:
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-SERPER_API_KEY=your_serper_api_key_here
-API_KEY=
-MIN_RELEVANCE_SCORE=0.15
-ALLOWED_ORIGINS=*
-CHROMA_DB_DIR=./chroma_db
-```
-*(Leave `API_KEY` empty to disable security for local testing).*
+Create a `.env` file in `backend/` and configure your API keys.
 
 Start the FastAPI server:
 ```bash
@@ -160,15 +207,13 @@ npm install
 npm run dev
 ```
 
-Create `frontend/.env.local`:
-```env
-VITE_API_URL=http://localhost:8000
-VITE_API_KEY=
-```
+Create `frontend/.env.local` and set `VITE_API_URL=http://localhost:8000`.
 
 Open `http://localhost:5173` in your browser.
 
-## Google Drive Configuration
+---
+
+## ☁ Google Drive Configuration
 
 To use the Google Drive ingestion feature:
 1. Go to the Google Cloud Console and create a project.
@@ -178,10 +223,12 @@ To use the Google Drive ingestion feature:
 
 On your first Drive ingestion, a browser window will open asking you to sign in and grant read permissions. This will generate a `token.json` file automatically, and you will not be asked to sign in again.
 
-## Cloud Deployment
+---
+
+## ▲ Cloud Deployment
 
 ### Deploy Backend to Hugging Face
-1. Create a Blank Docker Space on huggingface.co/spaces.
+1. Create a **Blank Docker Space** on huggingface.co/spaces.
 2. Push your repository to the Space using Git. Hugging Face will automatically detect the `Dockerfile` and build your backend.
 3. In your Space Settings -> Variables and secrets, add your `GEMINI_API_KEY`, `SERPER_API_KEY`, and a strong `API_KEY` password.
 
@@ -193,5 +240,4 @@ On your first Drive ingestion, a browser window will open asking you to sign in 
    *   `VITE_API_KEY`: The exact same password you set in Hugging Face.
 
 ---
-
 Built by Sunny Kant Kumar.
