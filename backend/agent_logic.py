@@ -37,7 +37,7 @@ def retrieve(state: GraphState) -> GraphState:
     """Retrieve documents and keep their relevance scores."""
     question = state["question"]
     session_id = state.get("session_id", "default")
-    results = vector_store.similarity_search_with_scores(question, k=10, session_id=session_id)
+    results = vector_store.similarity_search_with_scores(question, k=25, session_id=session_id)
     doc_contents = [doc.page_content for doc, _ in results]
     scores = [score for _, score in results]
     if scores:
@@ -58,10 +58,10 @@ def evaluate_relevance(state: GraphState) -> GraphState:
     docs_text = "\n\n".join([doc[:500] for doc in documents])
     
     sys_msg = SystemMessage(content=(
-        "You are a relevance grader assessing whether the retrieved context is relevant to the user's question. "
+        "You are a strict relevance grader assessing whether the retrieved context contains the answer to the user's question. "
         "If the user is asking a meta-question like 'summarize this document' or 'what is this about', ALWAYS output 'yes'. "
-        "If the context contains information that helps answer the question, output 'yes'. "
-        "If the context is completely irrelevant to the question, output 'no'. "
+        "If the context explicitly contains the answer to the user's specific question, output 'yes'. "
+        "If the context DOES NOT contain the answer, or only contains tangentially related information, output 'no'. "
         "Output ONLY the word 'yes' or 'no', nothing else."
     ))
     human_msg = HumanMessage(content=f"Context:\n{docs_text}\n\nQuestion: {question}")
