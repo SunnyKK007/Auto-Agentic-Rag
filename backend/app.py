@@ -17,6 +17,7 @@ from config import settings
 app = FastAPI(title="AutoDoc RAG API", version="1.0.0")
 
 @app.get("/")
+@app.head("/")
 def read_root():
     return {"status": "ok", "message": "Agentic RAG API is running"}
 
