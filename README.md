@@ -23,8 +23,6 @@ The system leverages a stateful **LangGraph** agent to dynamically retrieve up t
 
 [Try it Live → https://auto-agentic-rag.vercel.app](https://auto-agentic-mrfqpw61a-itzkingofavalon-4930s-projects.vercel.app/)
 
----
-
 ## ✦ Key Features
 
 *   **Deep Context Retrieval**: Retrieves extended context windows (up to 25 chunks) to ensure the AI has strong knowledge from multiple uploaded documents before answering.
