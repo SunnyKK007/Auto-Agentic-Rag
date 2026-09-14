@@ -1,11 +1,4 @@
----
-title: Auto-Agentic RAG
-emoji: ⚡
-colorFrom: gray
-colorTo: gray
-sdk: docker
-pinned: false
----
+
 
 # Auto-Agentic RAG System
 
