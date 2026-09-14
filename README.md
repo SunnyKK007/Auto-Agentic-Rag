@@ -63,7 +63,7 @@ flowchart TD
     E["web_search\nSerper.dev API\n(Answer Box + Knowledge Graph + 5 organic)"]
     E --> F
 
-    F["generate_answer\nGemini 2.5 Flash / GPT-4o-mini\nSynthesize final response"]
+    F["generate_answer\nGemini 2.5 Flash\nSynthesize final response"]
     F --> G
 
     G{"check_hallucination\nIs answer grounded?"}
@@ -162,7 +162,6 @@ Health-check endpoint.
 | `GEMINI_API_KEY` | Your Google Gemini API Key (Required). | - |
 | `SERPER_API_KEY` | Your Serper.dev API Key for Agentic Web Search. | - |
 | `API_KEY` | Security key for all endpoints. Leave blank for local dev. | - |
-| `MIN_RELEVANCE_SCORE`| Minimum Chroma DB similarity score before forcing web search. | `0.15` |
 | `ALLOWED_ORIGINS` | CORS allowed origins (comma separated). | `*` |
 | `CHROMA_DB_DIR` | Local directory to store vector databases. | `./chroma_db` |
 
