@@ -12,7 +12,9 @@
   <img src="https://img.shields.io/badge/FRONTEND-REACT_%2B_VITE-0088cc?style=for-the-badge&logo=react&logoColor=white" alt="React Vite Frontend" />
 </p>
 
-🟢 [Try it Live → https://auto-agentic-rag.vercel.app](https://auto-agentic-mrfqpw61a-itzkingofavalon-4930s-projects.vercel.app/)
+## Live Demo
+
+[Try it Live → https://auto-agentic-rag.vercel.app](https://auto-agentic-mrfqpw61a-itzkingofavalon-4930s-projects.vercel.app/)
 
 A modular, production-ready AutoDoc Retrieval-Augmented Generation (RAG) system built with a robust **FastAPI backend** and a visually stunning **React 19 + Vite 8 frontend**.
 
