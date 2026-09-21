@@ -1,5 +1,3 @@
-
-
 # Auto-Agentic RAG System
 
 <p align="left">
@@ -12,16 +10,13 @@
   <img src="https://img.shields.io/badge/FRONTEND-REACT_%2B_VITE-0088cc?style=for-the-badge&logo=react&logoColor=white" alt="React Vite Frontend" />
 </p>
 
+🚀 [Try it Live → https://auto-agentic-rag.vercel.app](https://semantic-book-recommender-five.vercel.app/)
 
 A modular, production-ready AutoDoc Retrieval-Augmented Generation (RAG) system built with a robust **FastAPI backend** and a visually stunning **React 19 + Vite 8 frontend**.
 
 The system leverages a stateful **LangGraph** agent to dynamically retrieve up to 25 context chunks from your documents using **ChromaDB**. It evaluates semantic relevance in real-time, answers with **Gemini 2.5 Flash** when document context is explicitly clear, and intelligently falls back to live Google Search via **Serper.dev** when your uploaded documents lack the required information.
 
 ---
-
-## Live Demo
-
-[Try it Live → https://auto-agentic-rag.vercel.app](https://auto-agentic-mrfqpw61a-itzkingofavalon-4930s-projects.vercel.app/)
 
 ## ✦ Key Features
 
