@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: auto-agentic-rag-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false          # You will fill this in Render dashboard
+      - key: SERPER_API_KEY
+        sync: false          # You will fill this in Render dashboard
+      - key: API_KEY
+        sync: false          # You will fill this in Render dashboard
+      - key: ALLOWED_ORIGINS
+        sync: false          # Set to your Vercel URL, e.g. https://your-app.vercel.app
+      - key: CHROMA_DB_DIR
+        value: ./chroma_db   # Local disk (ephemeral on free tier; upgrade for persistence)
